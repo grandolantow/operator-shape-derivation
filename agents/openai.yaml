@@ -1,0 +1,4 @@
+interface:
+  display_name: "算子 Shape 推导"
+  short_description: "根据配置与源码推导单算子或组合算子的形状，生成可复跑的测试负载"
+  default_prompt: "使用 $operator-shape-derivation，根据目标算子及配置推导 shape，优先核对 profiling，并生成 npu-kernelbench workload 和输入生成器。"

@@ -1,0 +1,64 @@
+# 证据与 shape 推导
+
+## 从材料到字段
+
+每条决定 shape 的事实记录 source id、文件/键/行范围或 trace event 定位及适用条件。为读取的关键配置、源码片段、权重头或采集文件保留哈希；代码有 revision 时同时记录。哈希证明所用材料，不能证明服务加载了该代码版本。
+
+权重默认只读取配置、索引和 tensor header 等元数据；不为 shape 推导加载完整大模型。分别记录 checkpoint 的存储 dtype、loader 变换和目标接口 dtype。模型级量化标签不能替代逐张量证据。
+
+不要设定“profiling 永远高于源码”或相反的固定优先级。冲突时检查设备/版本、进程所用代码、执行阶段、量化方式、padding、包装层、张量视图和采集点；未解释的冲突保留并限制结论适用范围。
+
+关键字段可采用以下状态，按字段记录来源，避免整个 case 一概标成“已观测”：
+
+| 状态 | 含义 |
+|---|---|
+| observed | 在明确运行条件下直接观测到该字段 |
+| derived | 由有来源的参数和公式得到；列出依赖与前提 |
+| assumed | 为测试选定的值；列出理由与使用范围 |
+| unknown | 当前不能确定；列出缺项并保留符号或 null |
+
+推导值依赖假设时，必须保留这条依赖链，不能消除 assumed 属性。未知的频率、延迟、cache 容量等使用 null，不能用 0 冒充观测。
+
+## 单算子与组合目标
+
+列出外部输入/输出、常量/权重、可写状态、metadata 与内部边；每条边明确生产者和消费者。
+
+对 A、B 组合成 C，核对：
+
+- 串联、并行分支、共享输入、结果合并的实际语义。A+B 是任务表达，不能当成数学定义。
+- 输入绑定及轴含义；reshape 的元素数、转置轴、广播规则、reduce 轴和 keepdim、split/concat 的轴与长度。
+- 中间 dtype、量化 scale/zero-point、打包、view/contiguous 转换。最终 output dtype 不能代替中间计算约定。
+- 哪些中间张量保留为 C 的输出，哪些内部消除；保留用户明确要求的输出和状态副作用。
+- A、B 既有实现的合法形状交集。若 C 尚无实现，区分语义约束、复用既有实现的约束和新设计假设；不要将独立 A、B 的所有 tiling 限制无条件强加给未来 C。
+
+仅影响内部 kernel 调度且不改变接口的设计，不应使 shape 推导膨胀为 kernel 实现任务。
+
+## 需要分开的维度层次
+
+1. 模型常量：hidden/head/intermediate/expert/压缩维度及版本适用性。
+2. 请求与执行：client 并发、每 rank 实际 batch、query/prefix 长度、prefill/decode/mixed、speculation、并行切分与同步。
+3. 分配与执行容量：token budget、graph buckets、padding、cache/page/table、输出分配上限。
+4. 有效工作量：有效 token/输出行、routing group counts、mask、接受/保留条目和实际读写范围。
+5. 物理接口：kernel 看到的 shape、dtype、stride、storage offset、layout/format、packing/对齐及别名。
+
+只分析影响目标接口的层次。不能将 client 并发直接当本 rank batch；不能由容量反推实际 workload，也不能由其他 rank 的原始 token 数替代同步后的执行结果。
+
+对 packed 低位类型同时记录逻辑元素数、物理 storage shape 和解释方式。stride/offset 写清单位；不将 byte stride 与 element stride 混用。轴名应表达含义，而非沿用不同算子的同名字母。
+
+对 ragged、MoE、cache、state 类接口，把元数据当作 shape 契约的一部分：prefix sums、group_list、start positions、block table、有效长度、padding masks 等需满足相关联的不变量。位置/路由变化可能改变工作量，即便 tensor shape 完全相同。
+
+## Profiling 的使用边界
+
+先识别采集覆盖的阶段、rank/step/layer 范围及缺失字段。通过关联 id、调用链和事件参数定位目标实例；同名 kernel 不必是同一算子，不同 kernel 名称也可能实现同一接口。
+
+有输入维度记录才能将其标为 observed shape。若只有耗时，可用于已匹配目标的热点排序；不据此补造维度、dtype、stride 或输入值。输入形状记录也通常不足以复原 group_list、block table 等动态 metadata。
+
+聚合时记录样本计数、分母、权重定义以及已去除的 warmup/重复/无关区间。跨 rank 或重叠事件的耗时不能直接作为端到端收益相加。样本内频率不能无条件推广到生产流量。
+
+## 用例选择
+
+按目标分支选择最小/代表/大规模、对齐与尾部、边界两侧、变长/不均衡及 padding 场景。只有接口允许时才加入零长度；有效输出为零的状态更新场景不一定等于空调用。
+
+区分性能代表性和约束覆盖，按实际需要组合。使用观测分布时保留选取/合并规则和覆盖率的分母。缺少 profiling 且用户已确认没有时，从已知配置范围内选择场景；没有依据的上下限也标明假设。
+
+不穷举全部参数笛卡尔积。需要硬件、dtype 或布局全覆盖时明确用户要求与用例预算；精简集合不能冒称完整覆盖。
