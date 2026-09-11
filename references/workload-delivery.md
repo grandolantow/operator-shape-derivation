@@ -17,7 +17,7 @@
 | 信息 | 要求 |
 |---|---|
 | target | 算子/组合关系、外部与中间接口、设备/版本、阶段 |
-| sources/config | 原始值、来源定位及最终生效值；区分脚本示例 |
+| sources/config | 原始值、来源定位及最终生效值；区分脚本示例；影响目标的执行量另注明范围与条件 |
 | tensors | shape、dtype、layout/stride/offset（适用时）、输入输出或状态角色 |
 | dependencies | 符号、公式、合法性约束、推导依赖与适用前提 |
 | cases | 稳定 id、具体参数、metadata 生成规则、来源类别和保留理由 |
@@ -55,6 +55,40 @@ shape 数据保留符号/未知状态；导出 runnable case 时所有必要字�
 - 单次输入生成不能解决 runner 在 reference/candidate/计时循环间直接复用可写输入的问题。若实际 runner 没有 reset 接线，明确标注状态隔离尚未接入；默认交付可提供所需 helper 和接入说明，但不能宣称正确性或计时状态已隔离，也不自行修改 evaluator。
 - 合理估算单 case 内存；逻辑表宽、活跃页数和物理 state 池分别计算。独立测试池可以用有依据的测试假设，但不能冒称真实服务分配。
 - 未知真实 metadata 时可以生成合法测试数据，但需符合用户允许假设的前提，并标为合成。无法具体化的必要字段不自动填默认值。
+
+## 执行量门禁与预期关系检查
+
+将当前目标相关的量整理为 `execution_contract`，可直接放入既有 `shape_results.json`，无需额外生成一套文件。以下为检查器所需的小型适配结构；不要求业务原 schema 改用这些字段，也不要求无关量出现：
+
+```json
+{
+  "execution_contract": {
+    "quantities": {
+      "M": {"value": 32, "scope": "本次MatMul输入X的行轴", "status": "configured", "evidence": "用户给定X.shape[0]=32"},
+      "K": {"value": 128, "scope": "本次MatMul收缩轴", "status": "configured", "evidence": "用户给定X.shape[1]=W.shape[0]=128"}
+    },
+    "required_for_export": ["M", "K"],
+    "decisions": []
+  }
+}
+```
+
+值未确定时用 `value:null` 与 `status:unknown/conditional`。派生量用 `depends_on` 引用量 id，并保留规则来源；明确选择的假设放在 `assumptions`，附选择/授权来源。存在影响结果的歧义时，`decisions` 写 `id/quantities/reason/question/status`；`pending` 必须即时呈报人工，`resolved` 记录实际决定的 `evidence` 并更新相应值/规则，不能只改状态。
+
+导出前调用本技能 [check_execution_contract.py](../scripts/check_execution_contract.py)：
+
+```bash
+python /path/to/operator-shape-derivation/scripts/check_execution_contract.py shape_results.json --output execution_check.json
+```
+
+检查器只做结构、依赖/假设传播和导出阻塞检查，不推断 DP 分配、不求值业务公式，也不证明来源或规则正确。未知/待人工判决的依赖阻止相关导出；独立已知量仍可继续分析或单独导出。退出码 `0` 表示所列依赖满足结构条件，`2` 表示需要判决/补充信息，`1` 表示结构或状态冲突；不能把 `0` 报为 shape 正确率。采用已有等价检查时保留同样的执行证据和分层结论。
+
+另外，在目标专用验证脚本中选择少量**有外部依据的预期关系**，执行真实推导函数后断言，记录规则来源与关系测试结果两栏。先从当前源码/接口确认复制还是分片，再设计 TP 变化检查；不能因为“TP翻倍、输出减半”通过，就认定分片规则正确。至少覆盖本目标的关键传播关系及适用边界，不要求固定数量：
+
+- 有明确线性关系时检查比例；不相关轴/权重检查保持不变。
+- `ceil`、padding bucket、裁剪上限允许区间内不变；检查预期等式、不等式或区间，以及有意义的阈值两侧，不能要求每次参数变化都引起 shape 变化。
+- 跨分支变化先重新核对适用规则，不能把单分支的比例关系外推；未确定分支标记未验证并保留人工判决。
+- 缺少规则依据时，关系测试即使通过也只能报告实现自洽，不能给出规则正确/已独立验证的结论。证据与实现冲突时保留失败结果，回到来源或人工判决，不调整期望值来追求通过。
 
 ## 验证与重跑
 
