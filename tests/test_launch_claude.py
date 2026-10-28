@@ -29,7 +29,8 @@ class LauncherTests(unittest.TestCase):
             '#!/usr/bin/env bash\n'
             'printf "cwd=%s\\n" "$PWD" > "$CAPTURE"\n'
             'printf "sandbox=%s\\n" "$IS_SANDBOX" >> "$CAPTURE"\n'
-            'printf "arg=%s\\n" "$@" >> "$CAPTURE"\n', encoding="utf-8")
+            'printf "arg=%s\\n" "$@" >> "$CAPTURE"\n'
+            'exit "${MOCK_CLAUDE_EXIT:-0}"\n', encoding="utf-8")
         mock_claude.chmod(0o755)
         self.capture = self.root / "capture.txt"
         self.env = os.environ.copy()
@@ -37,7 +38,7 @@ class LauncherTests(unittest.TestCase):
         self.env["CAPTURE"] = str(self.capture)
 
     def run_launcher(self, *args):
-        return subprocess.run([BASH, str(SCRIPT), *args], env=self.env,
+        return subprocess.run([BASH, str(SCRIPT), "--model", "task-model", "--effort", "medium", *args], env=self.env,
                               text=True, capture_output=True, check=False)
 
     def test_new_task_uses_sandbox_and_no_resume(self):
@@ -50,9 +51,21 @@ class LauncherTests(unittest.TestCase):
         self.assertTrue(any(line.startswith("arg=Read TASK.md") for line in lines))
 
     def test_resume_is_explicit(self):
-        result = self.run_launcher("--task-dir", str(self.task), "--resume")
+        result = self.run_launcher("--task-dir", str(self.task), "--resume", "exact-session", "--agent", "lingxi-evo")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("arg=-c", self.capture.read_text(encoding="utf-8").splitlines())
+        lines = self.capture.read_text(encoding="utf-8").splitlines()
+        self.assertNotIn("arg=-c", lines)
+        for item in ("--resume", "exact-session", "--model", "task-model", "--effort", "medium", "--agent", "lingxi-evo"):
+            self.assertIn(f"arg={item}", lines)
+
+    def test_resume_without_session_does_not_start_claude(self):
+        result = self.run_launcher("--task-dir", str(self.task), "--resume")
+        self.assertEqual(result.returncode, 2)
+        self.assertFalse(self.capture.exists())
+
+    def test_executor_exit_status_propagates(self):
+        self.env["MOCK_CLAUDE_EXIT"] = "17"
+        self.assertEqual(self.run_launcher("--task-dir", str(self.task)).returncode, 17)
 
     def test_missing_manifest_blocks_launch(self):
         (self.task / ".claude/workflow-bootstrap-manifest.json").unlink()

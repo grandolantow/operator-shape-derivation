@@ -1,11 +1,17 @@
 ---
 name: ascend-op-workflow
-description: 将已有 AscendC、Triton 算子或 PyTorch 小算子组合串成可恢复的开发工作流：推导 shape、准备 kernelbench 数据、复用或生成 AscendC、交接优化并归档证据。支持整算子及 C/V 串行路线，也支持 Codex 监工、Claude 执行；用于完整开发或跨阶段续办。
+description: 将 AscendC、Triton 算子或 PyTorch 小算子组合串成可恢复的开发工作流：推导 shape、准备 workload、复用或生成 AscendC、进化优化并归档证据。默认 Codex 执行、Claude 可选；支持 MindIE 入口、完整开发及跨阶段续办。
 ---
 
 # Ascend 算子开发工作流
 
 接受源码路径/算子入口及已有配置、profiling、shape 材料。协调现有专业技能，不重新实现其 kernel 算法或评测器。使用前告诉用户本次进入哪个阶段；任务已有结论和授权直接沿用。
+
+从 `/mindie-agent` 或 `$mindie-agent` 发起算子开发时，读取 [MindIE 接入与执行关联](references/mindie.md)，沿用当前宿主工具，不另建执行器。
+
+workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/优化需要完整 CANNBot 时，优先复用已知 checkout，缺少则询问是否安装或指定已有位置，选择安装后复用其原安装入口。拒绝安装时继续独立步骤并说明缺项。CANNBot 源码、脚本、模板与配置不修改，任务工程写入获准工作目录。
+
+生成和多轮优化消耗较多 token，启动说明中简短提示，建议常规代码模型和中等 effort；复杂设计/关键正确性再按项目规则局部提升。默认 Codex 直接使用实际工具；Claude 仅在明确选择时初始化，不能把 Claude Agent/Hook 当作 Codex 原生能力。记录实际模型/effort，未知项如实标明，不填历史默认值。
 
 ## 默认目标与进入条件
 
@@ -46,7 +52,7 @@ description: 将已有 AscendC、Triton 算子或 PyTorch 小算子组合串成�
 5. **建立G与交接**：G 全量精度通过且正式性能证据有效后冻结 G。若未达生成目标，记录 `GENERATION_TARGET_UNMET`，在已授权优化范围内继续；无正确 G 时先修复。完整已有 AscendC 复用路线记 generation=SKIPPED_REUSED，验证不可跳过。新 C→V 组合需 C 独立、V 独立和组合验证；G 包括 C、V、边界、适配及统一 runner，不能用组件通过替代父任务通过。
 6. **实际进入进化**：按所选Codex＋Claude协作或Codex独立模式，读取并实际调用 `ops-perf-evolution` 的适用入口；显式传父任务剩余预算（默认最多5轮/每轮5候选）、固定G、目标（默认1.5×）和正式计时协议，核实接收及真实候选执行证据。
 7. **进化搜索**：当前执行者持续推进授权内轮次。C/V 分支优化完整组合工程，以整条路径验收，组件搜索共享预算。下游内部 score 若相对 PyTorch，保留其原义并另建 G/O 正式验收，不能用内部 score 提前结束为“目标完成”。维护候选表及失败方向；冠军替换前核对全量精度和同条件性能。
-8. **收尾**：对最终 O 的源码/路由/库重验全量，输出逐 case R/G/O、总体加速比和退化项、原始采样及复现命令。结果区分精度通过/性能有效/生成目标/优化目标。预算结束允许交付 TARGET_UNMET。框架集成另列下一阶段；未实测不宣称整网收益。
+8. **收尾**：对最终 O 的源码/路由/库重验全量，输出逐 case R/G/O、总体加速比和退化项、原始采样及复现命令。结果区分精度通过/性能有效/生成目标/优化目标，以及原世界树校验和报告状态；归档通过不等于所有门禁通过。HTML 为可选展示，失败时保留错误并交付 Markdown、JSON 和原始证据，不修改 CANNBot 或伪造报告成功。预算结束允许交付 TARGET_UNMET。框架集成另列下一阶段；未实测不宣称整网收益。
 
 ## 资源、恢复和人参与
 

@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)][string]$TaskDir,
-    [Parameter(Mandatory = $true)][Alias("RepoRoot")][string]$CannbotRoot,
+    [Alias("RepoRoot")][string]$CannbotRoot,
     [string]$WorkflowSkill,
     [switch]$Apply
 )

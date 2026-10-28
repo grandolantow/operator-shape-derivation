@@ -135,13 +135,22 @@ class InstallCodexTests(unittest.TestCase):
         )
         self.assertIn(str(self.repo.resolve()), manifest["skill_origins"]["gen-only"][0])
 
-    def test_cli_requires_explicit_cannbot_root(self):
-        with contextlib.redirect_stderr(io.StringIO()) as errors:
-            with self.assertRaises(SystemExit) as raised:
-                installer.main(["--task-dir", str(self.task), "--apply"])
-        self.assertEqual(raised.exception.code, 2)
-        self.assertIn("--cannbot-root", errors.getvalue())
+    def test_standalone_install_dry_run_apply_and_repeat_without_cannbot(self):
+        vendor_before = {p: p.read_bytes() for p in self.repo.rglob("*") if p.is_file()}
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(installer.main(["--task-dir", str(self.task)]), 0)
         self.assertFalse((self.task / ".agents").exists())
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(installer.main(["--task-dir", str(self.task), "--apply"]), 0)
+            self.assertEqual(installer.main(["--task-dir", str(self.task), "--apply"]), 0)
+        manifest = json.loads((self.task / installer.MANIFEST).read_text(encoding="utf-8"))
+        self.assertIsNone(manifest["cannbot_root"])
+        self.assertEqual(set(manifest["entries"]), {
+            "AGENTS.md", ".agents/skills/ascend-op-workflow", ".agents/skills/operator-shape-derivation"})
+        self.assertEqual((self.task / ".agents/skills/ascend-op-workflow/SKILL.md").read_bytes(),
+                         (self.workflow / "SKILL.md").read_bytes())
+        self.assertFalse((self.task / ".claude").exists())
+        self.assertEqual(vendor_before, {p: p.read_bytes() for p in self.repo.rglob("*") if p.is_file()})
 
     def test_legacy_repo_root_alias_uses_same_external_source(self):
         with contextlib.redirect_stdout(io.StringIO()):

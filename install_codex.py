@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Install the Ascend operator workflow into one Windows Codex task.
+"""Install the Ascend operator workflow into one Codex task.
 
-Dry-run is the default. --apply copies skills and writes a task-local AGENTS.md;
-it never runs vendor init scripts, installs packages, or creates symlinks.
+[Role] Install task-local workflow/shape skills and optional CANNBot resources.
+[Invariants] CANNBot is an independent, read-only source; dry-run is the default.
+[Timeouts & Locks] No external commands or network; one installer per task.
+[Side-Effect Policy] --apply writes only task-local skills, routing and manifest.
 """
 
 from __future__ import annotations
@@ -115,7 +117,30 @@ def source_skill(plugin: Path, shared: Path, name: str, local_first: bool) -> Pa
     raise InstallError(f"Missing required skill {name} for {plugin.name}")
 
 
-def discover(repo: Path, workflow: Path) -> tuple[dict[str, Path], dict]:
+def packaged_skills(result: dict, origins: dict, workflow: Path) -> None:
+    if not (workflow / "SKILL.md").is_file():
+        raise InstallError(f"Missing source: {workflow / 'SKILL.md'}")
+    result["ascend-op-workflow"] = workflow
+    origins.setdefault("ascend-op-workflow", []).append(f"workflow:{workflow}")
+    bundled = PACKAGE / "skills"
+    required_shape = bundled / "operator-shape-derivation"
+    if not (required_shape / "SKILL.md").is_file():
+        raise InstallError(f"Missing required packaged skill: {required_shape}")
+    for source in sorted(bundled.iterdir()):
+        if not source.is_dir() or not (source / "SKILL.md").is_file() or source.name == "ascend-op-workflow":
+            continue
+        source = source.resolve()
+        if source.name in result and tree_digest(result[source.name]) != tree_digest(source):
+            raise InstallError(f"Packaged skill collision {source.name}: {result[source.name]} versus {source}")
+        result[source.name] = source
+        origins.setdefault(source.name, []).append(f"packaged:{source}")
+
+
+def discover(repo: Path | None, workflow: Path) -> tuple[dict[str, Path], dict]:
+    if repo is None:
+        skills, origins = {}, {}
+        packaged_skills(skills, origins, workflow)
+        return skills, {"skill_origins": origins, "vendor_contracts": {}, "vendor_agents": {}}
     gen = repo / "plugins-community" / GEN
     evo = repo / "plugins-community" / EVO
     shared = repo / "ops"
@@ -145,8 +170,6 @@ def discover(repo: Path, workflow: Path) -> tuple[dict[str, Path], dict]:
             origins.setdefault(name, []).append(f"{plugin.name}:{source}")
     if "ascend-op-workflow" in result and tree_digest(result["ascend-op-workflow"]) != tree_digest(workflow):
         raise InstallError("Workflow skill collides with a vendor skill")
-    result["ascend-op-workflow"] = workflow
-    origins.setdefault("ascend-op-workflow", []).append(f"workflow:{workflow}")
     case_generator = shared / "op-case-generator"
     if not (case_generator / "SKILL.md").is_file():
         raise InstallError(f"Missing workflow dependency: {case_generator}")
@@ -154,23 +177,7 @@ def discover(repo: Path, workflow: Path) -> tuple[dict[str, Path], dict]:
         raise InstallError("op-case-generator collides with a vendor dependency")
     result["op-case-generator"] = case_generator
     origins.setdefault("op-case-generator", []).append(f"workflow:{case_generator}")
-    bundled = PACKAGE / "skills"
-    if not bundled.is_dir():
-        raise InstallError(f"Missing packaged skills: {bundled}")
-    required_shape = bundled / "operator-shape-derivation"
-    if not (required_shape / "SKILL.md").is_file():
-        raise InstallError(f"Missing required packaged skill: {required_shape}")
-    for source in sorted(bundled.iterdir()):
-        if not source.is_dir() or not (source / "SKILL.md").is_file():
-            continue
-        source = source.resolve()
-        if source.name == "ascend-op-workflow":
-            # The explicit workflow entry, if supplied, is authoritative.
-            continue
-        if source.name in result and tree_digest(result[source.name]) != tree_digest(source):
-            raise InstallError(f"Packaged skill collision {source.name}: {result[source.name]} versus {source}")
-        result[source.name] = source
-        origins.setdefault(source.name, []).append(f"packaged:{source}")
+    packaged_skills(result, origins, workflow)
     metadata = {
         "skill_origins": origins,
         "vendor_contracts": {f"{plugin.name}/{name}": digest(plugin / name)
@@ -185,12 +192,28 @@ def output_bytes(value: object) -> bytes:
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
-def route_text(repo: Path) -> bytes:
+def route_text(repo: Path | None) -> bytes:
+    if repo is None:
+        return (
+            "# Ascend operator workflow for Codex\n\n"
+            "Start with `.agents/skills/ascend-op-workflow/SKILL.md`. For MindIE entry, read "
+            "its `references/mindie.md`. Codex executes generation and optimization by default; "
+            "Claude is optional. Generation and optimization consume substantial tokens; "
+            "recommend a regular coding model and medium effort.\n\n"
+            "Shape/workload preparation is available without CANNBot. When a stage needs CANNBot, "
+            "reuse the task's known checkout or ask whether to install it or select an existing one. "
+            "If installation is declined, continue independent steps and report the missing dependency. "
+            "Read original CANNBot instructions and use available tools; do not modify CANNBot, "
+            "register Claude agents in Codex, or assume Claude hooks run.\n"
+        ).encode("utf-8")
     gen = repo / "plugins-community" / GEN / "AGENTS.md"
     evo = repo / "plugins-community" / EVO / "AGENTS.md"
     return (
         "# Ascend operator workflow for Codex\n\n"
-        "Start with `.agents/skills/ascend-op-workflow/SKILL.md`. Use its stage and evidence rules. "
+        "Start with `.agents/skills/ascend-op-workflow/SKILL.md`. For MindIE entry read its "
+        "`references/mindie.md`. Codex is the default executor; Claude is optional. Generation and "
+        "optimization consume substantial tokens; recommend a regular coding model and medium effort. "
+        "Keep the external CANNBot checkout unchanged. Use the workflow's stage and evidence rules. "
         "For generation, read the source generation AGENTS.md below; for optimization, read the source "
         "evolution AGENTS.md. These plugin roots have AGENTS.md entrypoints, not root SKILL.md files; "
         "do not invent a Skill() call for either plugin. Keep their roles and original agent names distinct.\n\n"
@@ -222,8 +245,8 @@ def route_text(repo: Path) -> bytes:
     ).encode("utf-8")
 
 
-def plan(repo: Path, task: Path, workflow: Path) -> tuple[dict, dict]:
-    repo = repo.resolve(strict=True)
+def plan(repo: Path | None, task: Path, workflow: Path) -> tuple[dict, dict]:
+    repo = repo.resolve(strict=True) if repo else None
     task = task.resolve(strict=True)
     workflow = workflow.resolve(strict=True)
     if not task.is_dir():
@@ -237,7 +260,7 @@ def plan(repo: Path, task: Path, workflow: Path) -> tuple[dict, dict]:
     route = route_text(repo)
     entries["AGENTS.md"] = {"kind": "file", "source": None,
                             "sha256": hashlib.sha256(route).hexdigest(), "data": route}
-    manifest = {"schema": 1, "repo_root": str(repo), "cannbot_root": str(repo),
+    manifest = {"schema": 1, "repo_root": str(repo) if repo else None, "cannbot_root": str(repo) if repo else None,
                 "workflow_repo_root": str(PACKAGE.resolve(strict=True)), "task_dir": str(task),
                 "workflow_skill": str(workflow), **metadata,
                 "entries": {name: {key: value for key, value in item.items() if key != "data"}
@@ -295,14 +318,14 @@ def install(task: Path, entries: dict) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cannbot-root", "--repo-root", dest="cannbot_root", required=True,
-                        help="External CANNBot source checkout (--repo-root is a compatibility alias)")
+    parser.add_argument("--cannbot-root", "--repo-root", dest="cannbot_root",
+                        help="Optional existing CANNBot checkout; omit to install only workflow/shape")
     parser.add_argument("--task-dir", required=True)
     parser.add_argument("--workflow-skill", help="Defaults to this package's skills/ascend-op-workflow")
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args(argv)
     try:
-        repo = Path(args.cannbot_root).resolve(strict=True)
+        repo = Path(args.cannbot_root).resolve(strict=True) if args.cannbot_root else None
         raw_task = Path(args.task_dir)
         reject_reparse_chain(raw_task)
         task = raw_task.resolve(strict=True)

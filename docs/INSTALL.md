@@ -2,9 +2,9 @@
 
 ## 两个独立目录
 
-本仓提供工作流与shape技能；外部CANNBot提供真实生成/进化插件和公共依赖。CANNBot必须是完整checkout，包含plugins-community下的tilelang2ascendc-ops-generator、ops-perf-evolution，以及它们声明的ops/skills、agents、hooks、workflows和模板。只复制SKILL.md不足以运行。
+本仓可独立安装工作流与shape技能；外部CANNBot在生成/优化阶段提供执行参考、工具和公共依赖。需要时复用完整checkout，包含plugins-community下的tilelang2ascendc-ops-generator、ops-perf-evolution及其依赖。只复制SKILL.md不足以运行生成/优化。CANNBot源码与已有配置保持不动。
 
-参数`--cannbot-root`显式选择外部checkout，旧`--repo-root`是同义兼容参数；二者都不表示本仓。工作流与shape从安装器所在仓库的skills读取，不从CANNBot/tools取。`--workflow-skill`可覆盖主技能入口，shape仍来自本仓。
+参数`--cannbot-root`可选：提供时将外部checkout声明的技能一并安装为任务快照；省略时只安装本仓workflow/shape，生成或优化需要时再由Skill询问安装或指定已有位置。旧`--repo-root`是同义兼容参数；二者都不表示本仓。工作流与shape从安装器所在仓库的skills读取，不从CANNBot/tools取。`--workflow-skill`可覆盖主技能入口，shape仍来自本仓。
 
 ## 前置依赖
 
@@ -19,14 +19,17 @@
 
 ```powershell
 $workflow = 'C:\work\ascend-op-workflow'
-$cannbot = 'C:\work\cannbot-skills'
 $task = 'C:\work\tasks\my-op'
 New-Item -ItemType Directory -Force -Path $task | Out-Null
-python "$workflow\install_codex.py" --cannbot-root $cannbot --task-dir $task
-python "$workflow\install_codex.py" --cannbot-root $cannbot --task-dir $task --apply
+python "$workflow\install_codex.py" --task-dir $task
+python "$workflow\install_codex.py" --task-dir $task --apply
 ```
 
 也可运行根目录install-codex.ps1，使用-CannbotRoot（兼容-RepoRoot）。安装器复制任务级.agents/skills、写AGENTS.md路由及manifest，不需要Windows链接权限。打开任务目录新会话，确认ascend-op-workflow可发现。Codex把Claude角色文档作为参考，使用实际可用工具/子agent，不伪造Claude原生hook已运行。
+
+Linux Codex 同样运行 `python3 "$workflow/install_codex.py" --task-dir "$task" --apply`，不需要 Claude 或 Node。已有任务配置不覆盖；如有 AGENTS.md 冲突，可保留原文件，在其中引用本仓技能入口。运行时缺少 CANNBot 则先询问；选择安装后复用该版本原安装入口，拒绝时继续 shape/workload，明确生成/优化尚不可执行。无需为运行时指定 CANNBot 重新覆盖安装 manifest。
+
+MindIE 入口、默认 Codex 的真实生成/进化和作业关联见 [MindIE 接入参考](../skills/ascend-op-workflow/references/mindie.md)。执行前提示 token 成本较大，建议常规代码模型和中等 effort；Claude 仅在明确选择后配置。
 
 ## Linux Claude
 
@@ -42,10 +45,10 @@ bash "$workflow/install-claude.sh" --cannbot-root "$cannbot" --task-dir "$task" 
 初始化合并任务级skills、agents和hooks，注册CLAUDE.md路由及manifest；不会执行两个插件的init.sh。源技能使用链接，两个源码目录要保留在安装时位置。准备TASK.md并确认授权后才运行：
 
 ```bash
-bash "$workflow/launch-claude.sh" --task-dir "$task" --task-file TASK.md
+bash "$workflow/launch-claude.sh" --task-dir "$task" --task-file TASK.md --model "$model" --effort "$effort"
 ```
 
-启动器使用IS_SANDBOX=1和--dangerously-skip-permissions，代理/认证沿用进程环境，不读取其他进程凭据或写全局配置。--resume使用最近会话，必须先核实任务cwd与最近会话确为目标；不要在多会话情况下盲用。启动后实际验证技能/agent加载和工具执行，不把配置存在当运行成功。
+启动器使用IS_SANDBOX=1和--dangerously-skip-permissions，代理/认证沿用进程环境，不读取其他进程凭据或写全局配置。`model`/`effort` 取当前任务选择；可用 `--agent NAME` 指定已初始化的原Agent，`--resume SESSION_ID` 精确恢复原会话，不使用最近会话。启动后记录并核验实际模型与effort、技能/agent加载和工具执行，提供商拒绝时不静默替换，不把配置存在当运行成功。
 
 ## 环境安装脚本
 

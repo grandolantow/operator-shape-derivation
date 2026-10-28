@@ -6,6 +6,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import workflow
 
@@ -82,6 +83,71 @@ class WorkflowTests(unittest.TestCase):
             args.extend(["--evidence", str(evidence)])
         return self.invoke(*args)
 
+    def link(self, preparation, job="tool-job", *extra):
+        return self.invoke("link", "--run", str(self.run), "--preparation", preparation,
+                           "--job-id", job, "--endpoint", "test-endpoint", "--container", "test-container", *extra)
+
+    def test_codex_execution_links_follow_generation_to_fixed_g_optimization(self):
+        self.initialize("production")
+        gen = self.prepare("generation")
+        index_before = (self.run / "run.json").read_bytes()
+        code, links, error = self.link(gen, "gen-job", "--model", "task-model", "--effort", "medium")
+        self.assertEqual(code, 0, error)
+        self.assertEqual(links["executions"][0]["executor"], "codex")
+        self.assertIsNone(links["executions"][0]["claude_session_id"])
+        self.assertEqual((self.run / "run.json").read_bytes(), index_before)
+        g = self.freeze(self.generated)
+        code, result, error = self.result("generation", gen, g, self.evidence("original", g, 100, 90))
+        self.assertEqual(code, 0, error)
+        self.assertEqual(self.link(gen, "gen-job", "--result", result["result_id"])[0], 0)
+        opt = self.prepare("optimization", g)
+        evo = self.root / "evolution"
+        evo.mkdir()
+        self.assertEqual(self.link(opt, "opt-job", "--evo-dir", str(evo))[0], 0)
+        o = self.freeze(self.optimized)
+        code, result, error = self.result("optimization", opt, o, self.evidence(g, o, 90, 70))
+        self.assertEqual(code, 0, error)
+        self.assertEqual(result["status"], "TARGET_UNMET")
+        for _ in range(2):
+            code, links, error = self.link(opt, "opt-job", "--result", result["result_id"], "--artifact", str(self.log))
+            self.assertEqual(code, 0, error)
+        self.assertEqual(len(links["executions"]), 2)
+        self.assertEqual(links["executions"][1]["artifacts"], [str(self.log.resolve())])
+        self.assertEqual(self.invoke("verify", "--run", str(self.run))[0], 0)
+
+    def test_links_reject_cross_preparation_result_and_job_rebinding_without_writes(self):
+        self.initialize("rehearsal")
+        gen = self.prepare("generation")
+        other = self.prepare("generation")
+        g = self.freeze(self.generated)
+        _, result, _ = self.result("generation", gen, g)
+        self.assertEqual(self.link(gen)[0], 0)
+        path = self.run / "execution-links.json"
+        before = path.read_bytes()
+        self.assertEqual(self.link(other, "other-job", "--result", result["result_id"])[0], 2)
+        self.assertEqual(self.link(other)[0], 2)
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_show_and_link_skip_hashing_but_final_verify_still_detects_changed_evidence(self):
+        self.initialize("rehearsal")
+        gen = self.prepare("generation")
+        with patch.object(workflow, "digest", side_effect=AssertionError("metadata must not hash")):
+            self.assertEqual(self.link(gen)[0], 0)
+            self.assertEqual(self.invoke("show", "--run", str(self.run))[0], 0)
+        archived = next((self.run / "packages/original/source").iterdir())
+        archived.write_text("changed", encoding="utf-8")
+        self.assertEqual(self.invoke("show", "--run", str(self.run))[0], 0)
+        self.assertEqual(self.invoke("verify", "--run", str(self.run))[0], 2)
+
+    def test_claude_session_is_optional_and_bound_only_to_selected_executor(self):
+        self.initialize("rehearsal")
+        gen = self.prepare("generation")
+        self.assertEqual(self.link(gen, "claude-job", "--claude-session", "session-a")[0], 2)
+        code, links, error = self.link(gen, "claude-job", "--executor", "claude", "--claude-session", "session-a")
+        self.assertEqual(code, 0, error)
+        self.assertEqual(links["executions"][0]["claude_session_id"], "session-a")
+        self.assertEqual(self.link(gen, "claude-job", "--claude-session", "session-b")[0], 2)
+
     def test_rehearsal_handoff_has_null_measurements_and_real_package_lineage(self):
         self.initialize("rehearsal")
         generation_preparation = self.prepare("generation")
@@ -109,19 +175,20 @@ class WorkflowTests(unittest.TestCase):
         self.initialize("production")
         generation_preparation = self.prepare("generation")
         generated = self.freeze(self.generated)
-        evidence = self.evidence("original", generated, 100, 90)
+        # A correct G slower than R must remain usable as the fixed optimization baseline.
+        evidence = self.evidence("original", generated, 100, 200)
         code, result, error = self.result("generation", generation_preparation, generated, evidence)
         self.assertEqual(code, 0, error)
         self.assertEqual(result["status"], "TARGET_UNMET")
-        self.assertAlmostEqual(result["speedup_geomean"], 100 / 90)
+        self.assertAlmostEqual(result["speedup_geomean"], 0.5)
         self.assertEqual(result["target_speedup"], 1.2)
         optimized = self.freeze(self.optimized)
         optimization_preparation = self.prepare("optimization", generated)
-        evidence = self.evidence(generated, optimized, 90, 50)
+        evidence = self.evidence(generated, optimized, 200, 100)
         code, result, error = self.result("optimization", optimization_preparation, optimized, evidence)
         self.assertEqual(code, 0, error)
         self.assertEqual(result["status"], "TARGET_MET")
-        self.assertAlmostEqual(result["speedup_geomean"], 1.8)
+        self.assertAlmostEqual(result["speedup_geomean"], 2.0)
         self.assertEqual(result["target_speedup"], 1.5)
 
     def test_production_rejects_synthetic_incomplete_and_missing_measurement(self):

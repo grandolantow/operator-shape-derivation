@@ -6,6 +6,7 @@
 - **单独shape/workload：** [operator-shape-derivation](skills/operator-shape-derivation/SKILL.md)
 - **安装与使用：** [Windows Codex / Linux Claude](docs/INSTALL.md)
 - **阶段与分工：** [标准工作流](docs/WORKFLOW.md)
+- **MindIE 接入：** [入口、默认 Codex 执行与作业关联](skills/ascend-op-workflow/references/mindie.md)
 - **旧入口兼容：** [迁移说明](docs/MIGRATION.md)
 - **来源与依赖：** [SOURCES.md](SOURCES.md)
 
@@ -21,14 +22,14 @@
 
 ## 快速使用
 
-先准备本仓和完整外部CANNBot checkout，再创建独立任务目录。Windows示例：
+先准备本仓，再创建独立任务目录。默认安装不依赖 CANNBot；实际生成/优化需要时再询问安装或复用已有 checkout。Windows示例：
 
 ```powershell
-python .\install_codex.py --cannbot-root C:\work\cannbot-skills --task-dir C:\work\tasks\my-op
-python .\install_codex.py --cannbot-root C:\work\cannbot-skills --task-dir C:\work\tasks\my-op --apply
+python .\install_codex.py --task-dir C:\work\tasks\my-op
+python .\install_codex.py --task-dir C:\work\tasks\my-op --apply
 ```
 
-Linux协作入口：
+Linux Codex 使用同一个 Python 安装器。Claude 选配入口：
 
 ```bash
 bash ./install-claude.sh --cannbot-root /workspace/cannbot-skills --task-dir /workspace/tasks/my-op
@@ -37,7 +38,7 @@ bash ./install-claude.sh --cannbot-root /workspace/cannbot-skills --task-dir /wo
 
 以上任务目录须已存在。第一条预览，第二条实际安装；未知配置或已修改的托管内容不会被覆盖。打开任务目录并使用ascend-op-workflow；Claude执行仅在明确选择协作/Claude入口时需要。
 
-仅做shape推导可继续使用旧的根目录SKILL.md安装方式，不要求CANNBot或NPU；完整安装才需要外部依赖。实际依赖和更新注意事项见安装说明。
+仅做shape推导可继续使用旧的根目录SKILL.md安装方式，不要求CANNBot或NPU。生成与多轮优化消耗较多 token，建议常规代码模型和中等 effort，复杂问题再局部提升；CANNBot 保持独立且不修改。实际依赖和更新注意事项见安装说明。
 
 ## 验证
 

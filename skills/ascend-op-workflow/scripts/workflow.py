@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Local, standard-library archive and evidence gates for operator handoffs.
 
-This program never builds, benchmarks, invokes a kernel, or runs another command.
-It checks the supplied evidence and preserves the referenced bytes for review.
+[Role] Archive evidence and link caller-observed execution references.
+[Invariants] Fixed run/G identity; execution links never dispatch or own job state.
+[Timeouts & Locks] No subprocess or network waits; one parent writer per run.
+[Side-Effect Policy] Write only the selected run archive and execution-links.json.
 """
 
 from __future__ import annotations
@@ -112,11 +114,16 @@ def copy_inputs(sources: list[Path], destination: Path) -> None:
             shutil.copy2(source, target)
 
 
-def load_run(run: Path) -> dict:
-    run = safe_source(run)
-    config = read_json(run / "run.json")
+def read_run(run: Path) -> dict:
+    # Metadata queries do not walk packages or hash archived evidence.
+    config = read_json(within(run, "run.json"))
     if config.get("schema") != SCHEMA or config.get("mode") not in ("production", "rehearsal"):
         raise WorkflowError("Unsupported or invalid run configuration")
+    return config
+
+
+def load_run(run: Path) -> dict:
+    config = read_run(run)
     verify(run)
     return config
 
@@ -416,6 +423,67 @@ def record_result(args: argparse.Namespace) -> dict:
     return {"result_id": identifier, "status": status, "speedup_geomean": speedup, "target_speedup": target_for(config, args.stage), "path": str(target_dir / "handoff.json")}
 
 
+def execution_links(run: Path) -> dict:
+    path = within(run, "execution-links.json")
+    if not path.exists():
+        return {"parent_run": str(run), "executions": []}
+    value = read_json(path)
+    if value.get("parent_run") != str(run):
+        raise WorkflowError("Execution links belong to another parent run")
+    return value
+
+
+def link_execution(args: argparse.Namespace) -> dict:
+    run = Path(args.run).resolve(strict=True)
+    config = read_run(run)
+    if args.preparation not in config["preparations"]:
+        raise WorkflowError("Preparation does not belong to this parent run")
+    if args.result:
+        if args.result not in config["handoffs"]:
+            raise WorkflowError("Result does not belong to this parent run")
+        handoff = read_json(within(run, f"handoffs/{args.result}/handoff.json"))
+        if handoff["preparation_id"] != args.preparation:
+            raise WorkflowError("Result belongs to another preparation")
+    value = execution_links(run)
+    entry = next((item for item in value["executions"] if item["job_id"] == args.job_id), None)
+    is_new = entry is None
+    if is_new:
+        entry = {"preparation_id": args.preparation, "job_id": args.job_id,
+                 "endpoint": args.endpoint, "container": args.container,
+                 "executor": args.executor or "codex", "claude_session_id": None,
+                 "evo_dir": None, "artifacts": [], "result_id": None}
+    additions = {"preparation_id": args.preparation, "endpoint": args.endpoint,
+                 "container": args.container, "executor": args.executor,
+                 "model": args.model, "effort": args.effort,
+                 "claude_session_id": args.claude_session, "result_id": args.result}
+    if args.evo_dir:
+        evo = Path(args.evo_dir).resolve(strict=True)
+        if not evo.is_dir():
+            raise WorkflowError("Evolution path must be an existing directory")
+        additions["evo_dir"] = str(evo)
+    # Older project records have no executor field; preserve their actual identity.
+    executor = args.executor or entry.get("executor") or ("claude" if entry.get("claude_session_id") else "codex")
+    if args.claude_session and executor != "claude":
+        raise WorkflowError("Claude session requires --executor claude")
+    for key, supplied in additions.items():
+        if supplied is not None:
+            if entry.get(key) is not None and entry[key] != supplied:
+                raise WorkflowError(f"Existing job has a different {key}")
+            entry[key] = supplied
+    for raw in args.artifact:
+        source = Path(raw).resolve(strict=True)
+        if not source.is_file() and not source.is_dir():
+            raise WorkflowError(f"Raw artifact must be a file or directory: {source}")
+        if str(source) not in entry["artifacts"]:
+            entry["artifacts"].append(str(source))
+    if is_new:
+        value["executions"].append(entry)
+    temporary = run / f"execution-links-{uuid.uuid4().hex}.json"
+    write_json(temporary, value)
+    os.replace(temporary, within(run, "execution-links.json"))
+    return value
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -446,7 +514,20 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--candidate", required=True)
     p.add_argument("--skill", required=True)
     p.add_argument("--evidence")
-    for name in ("inspect", "verify"):
+    p = sub.add_parser("link", help="record an actual tool job receipt; never submit work")
+    p.add_argument("--run", required=True)
+    p.add_argument("--preparation", required=True)
+    p.add_argument("--job-id", required=True)
+    p.add_argument("--endpoint", required=True)
+    p.add_argument("--container", required=True)
+    p.add_argument("--executor", choices=["codex", "claude"])
+    p.add_argument("--model")
+    p.add_argument("--effort")
+    p.add_argument("--claude-session")
+    p.add_argument("--evo-dir")
+    p.add_argument("--artifact", action="append", default=[])
+    p.add_argument("--result")
+    for name in ("inspect", "verify", "show"):
         p = sub.add_parser(name)
         p.add_argument("--run", required=True)
     args = parser.parse_args(argv)
@@ -459,6 +540,12 @@ def main(argv: list[str] | None = None) -> int:
             result = prepare(args)
         elif args.command == "result":
             result = record_result(args)
+        elif args.command == "link":
+            result = link_execution(args)
+        elif args.command == "show":
+            run = Path(args.run).resolve(strict=True)
+            read_run(run)
+            result = execution_links(run)
         elif args.command == "inspect":
             config = load_run(Path(args.run).absolute())
             result = {k: v for k, v in config.items() if k != "files"}

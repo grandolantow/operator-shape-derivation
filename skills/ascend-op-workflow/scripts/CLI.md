@@ -11,9 +11,13 @@ python workflow.py prepare --run RUN --stage generation|optimization --skill SKI
 python workflow.py result --run RUN --stage generation|optimization --preparation PREPARATION_ID --candidate PACKAGE_ID --skill SKILL.md [--evidence EVIDENCE.json]
 python workflow.py inspect --run RUN
 python workflow.py verify --run RUN
+python workflow.py link --run RUN --preparation PREPARATION_ID --job-id JOB_ID --endpoint ALIAS --container CONTAINER [--executor codex|claude] [--model MODEL] [--effort EFFORT] [--claude-session SESSION_ID] [--evo-dir DIR] [--artifact PATH ...] [--result RESULT_ID]
+python workflow.py show --run RUN
 ```
 
 `init` creates a new run only; it never overwrites one. It freezes the original inputs as package `original`. Production requires `--case-manifest`, a JSON object with a nonempty, unique `case_ids` array. Targets and the optimization plan are frozen in `run.json`. `freeze` archives a generated or optimized source tree and returns its package ID. A source under `RUN/work` is allowed; a source containing `RUN` or inside the immutable `packages`, `preparations`, or `handoffs` archives is rejected.
+
+`link` records actual tool receipts in `execution-links.json`; it never submits, resumes, polls or cancels work. New entries default to Codex and need no Claude session. Select `--executor claude` when supplying a Claude session. Repeating the same link adds references without duplicating jobs; established preparation/endpoint/container/session/evo/result identity cannot be replaced. A result must belong to the same preparation. Artifact paths must exist and may keep growing; final evidence is frozen by `result`, not `link`. Model/effort record observed choices when available. `show` reads these references, not live job state. Both commands read only metadata and skip archive hashing; `verify` remains the full integrity check. One parent coordinator writes links. See [MindIE integration](../references/mindie.md) for execution and recovery.
 
 `prepare generation` needs only the frozen original input and a readable skill entry. `prepare optimization` needs a frozen G package. In production it requires a previous generation result for that G, or, for an existing AscendC input, `--reuse-evidence` validating the frozen G package. In rehearsal, a frozen synthetic G is enough. The first optimization preparation fixes G as the comparison denominator for that run; changing G requires a new run. Both preparation records carry the numeric target, while correctness and measured speedup remain null.
 
