@@ -385,6 +385,59 @@ class WorkflowTests(unittest.TestCase):
         (self.run / "run.json").write_text(json.dumps(config))
         self.assertEqual(self.auto_prepare(other)[0], 2)
 
+    def test_lightweight_handoff_reuses_frozen_acceptance_without_new_measurements(self):
+        candidate, acceptance = self.auto_acceptance(200)
+        before = workflow.load_run(self.run)
+        code, preparation, error = self.auto_prepare(candidate)
+        self.assertEqual(code, 0, error)
+        record = json.loads(Path(preparation["path"]).read_text())
+        self.assertEqual(record["execution_profile"], "lightweight")
+        self.assertEqual(record["baseline_acceptance"], {
+            "candidate_package": candidate,
+            "result_paths": [f"handoffs/{acceptance['result_id']}/handoff.json"],
+        })
+        self.assertIsNone(record["correctness"])
+        self.assertIsNone(record["speedup_geomean"])
+        after = workflow.load_run(self.run)
+        self.assertEqual(before["handoffs"], after["handoffs"])
+        self.assertEqual(before["packages"], after["packages"])
+        self.assertEqual(before["optimization_plan"], after["optimization_plan"])
+        self.assertEqual(self.auto_prepare(self.freeze(self.optimized))[0], 2)
+        # The reusable reference remains protected by the archive hashes.
+        Path(acceptance["path"]).write_text("tampered", encoding="utf-8")
+        self.assertEqual(self.auto_prepare(candidate)[0], 2)
+
+    def test_execution_profile_is_explicit_and_preserved_on_resume(self):
+        candidate, _ = self.auto_acceptance(200)
+        code, preparation, error = self.auto_prepare(candidate, "--execution-profile", "native")
+        self.assertEqual(code, 0, error)
+        code, resumed, error = self.auto_prepare(candidate)
+        self.assertEqual(code, 0, error)
+        self.assertEqual(json.loads(Path(resumed["path"]).read_text())["execution_profile"], "native")
+        self.assertEqual(self.auto_prepare(candidate, "--execution-profile", "lightweight")[0], 2)
+        # A pre-profile archived preparation is a native run, not a new lite run.
+        config = workflow.load_run(self.run)
+        for identifier, entry in config["preparations"].items():
+            if entry["stage"] == "optimization":
+                relative = f"preparations/{identifier}/prepare.json"
+                path = self.run / relative
+                record = json.loads(path.read_text())
+                del record["execution_profile"]
+                path.write_text(json.dumps(record), encoding="utf-8")
+                entry["files"][relative] = workflow.digest(path)
+        workflow.save_index(self.run, config)
+        code, resumed, error = self.auto_prepare(candidate)
+        self.assertEqual(code, 0, error)
+        self.assertEqual(json.loads(Path(resumed["path"]).read_text())["execution_profile"], "native")
+
+    def test_rehearsal_cannot_claim_reusable_acceptance(self):
+        self.initialize("rehearsal")
+        candidate = self.freeze(self.generated)
+        prep = self.prepare("optimization", candidate)
+        record = json.loads((self.run / "preparations" / prep / "prepare.json").read_text())
+        self.assertEqual(record["execution_profile"], "lightweight")
+        self.assertIsNone(record["baseline_acceptance"])
+
     def test_auto_missing_invalid_and_conflicting_acceptance_never_dispatch(self):
         self.assertEqual(self.initialize_selected()[0], 0)
         candidate = self.freeze(self.generated)
