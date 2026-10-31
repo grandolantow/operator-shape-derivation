@@ -30,6 +30,8 @@ python /path/to/workflow/install_codex.py --task-dir /path/to/task --apply
 
 ## 远端作业与关联
 
+启动远端生成/优化前，确认 MindIE 原生远端工具可用；失败时报告具体错误，先排查环境配置。
+
 使用已指定环境，先按环境池完成预检，再用 MindIE 原生 remote-dev 提交命令到准确 alias/容器/cwd。原生工具管理真实进程和取消，workflow 只记录回执。查询状态使用原工具，不从关联文件推断任务仍在运行。
 
 ```bash
