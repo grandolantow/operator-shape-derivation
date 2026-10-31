@@ -284,6 +284,8 @@ def prepare(args: argparse.Namespace) -> dict:
     route = "generation"
     evidence = None
     if args.stage == "generation":
+        if args.execution_profile:
+            raise WorkflowError("Execution profile applies only to optimization")
         if args.candidate or args.reuse_evidence:
             raise WorkflowError("Generation preparation uses the frozen original input only")
     else:
@@ -296,12 +298,17 @@ def prepare(args: argparse.Namespace) -> dict:
         if not args.candidate or args.candidate not in config["packages"]:
             raise WorkflowError("Optimization preparation requires a frozen G package")
         baseline = args.candidate
-        existing_baselines = {
-            item["baseline_package"] for item in archived_preparations(run, config)
-            if item["stage"] == "optimization"
-        }
+        prior_optimization = [item for item in archived_preparations(run, config)
+                              if item["stage"] == "optimization"]
+        existing_baselines = {item["baseline_package"] for item in prior_optimization}
         if existing_baselines and existing_baselines != {baseline}:
             raise WorkflowError("Optimization G baseline is fixed for this run")
+        profiles = {item.get("execution_profile", "native") for item in prior_optimization}
+        if len(profiles) > 1:
+            raise WorkflowError("Conflicting archived optimization execution profiles")
+        execution_profile = next(iter(profiles), args.execution_profile or "lightweight")
+        if args.execution_profile and args.execution_profile != execution_profile:
+            raise WorkflowError("Resume the existing optimization execution profile")
         valid_generation = any(
             item["stage"] == "generation" and item["candidate_package"] == baseline
             and (config["mode"] == "rehearsal" or
@@ -351,6 +358,19 @@ def prepare(args: argparse.Namespace) -> dict:
             output[key] = config[key]
     if args.stage == "optimization":
         output.update(round=round_number, round_gate=round_gate)
+        # Reuse immutable acceptance records instead of asking the optimizer to
+        # rebuild/retest an unchanged G merely to cross a stage boundary.
+        output["execution_profile"] = execution_profile
+        output["baseline_acceptance"] = None
+        if config["mode"] == "production" and route == "generated":
+            acceptance = generation_decision(run, config, baseline)
+            if (acceptance["correctness_status"] == "FULL_PASS"
+                    and acceptance["performance_status"] in {"TARGET_MET", "TARGET_UNMET"}):
+                output["baseline_acceptance"] = {
+                    "candidate_package": baseline,
+                    "result_paths": [f"handoffs/{identifier}/handoff.json"
+                                     for identifier in acceptance["acceptance_result_ids"]],
+                }
     write_json(destination / "prepare.json", output)
     config["preparations"][identifier] = {
         "stage": args.stage, "baseline_package": baseline,
@@ -796,6 +816,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--candidate")
     p.add_argument("--reuse-evidence")
     p.add_argument("--round", type=int)
+    p.add_argument("--execution-profile", choices=("lightweight", "native"))
     p = sub.add_parser("result")
     p.add_argument("--run", required=True)
     p.add_argument("--stage", choices=list(TARGETS), required=True)
