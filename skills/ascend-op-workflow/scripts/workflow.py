@@ -137,9 +137,10 @@ def verify(run: Path) -> dict:
     package_ids = config.get("packages", {})
     handoff_ids = config.get("handoffs", {})
     preparation_ids = config.get("preparations", {})
-    if not isinstance(package_ids, dict) or not isinstance(handoff_ids, dict) or not isinstance(preparation_ids, dict):
+    review_ids = config.get("round_reviews", {})
+    if not all(isinstance(x, dict) for x in (package_ids, handoff_ids, preparation_ids, review_ids)):
         raise WorkflowError("Invalid archive index")
-    for identifier, meta in {**package_ids, **handoff_ids, **preparation_ids}.items():
+    for identifier, meta in {**package_ids, **handoff_ids, **preparation_ids, **review_ids}.items():
         if not isinstance(identifier, str) or not isinstance(meta, dict):
             raise WorkflowError("Invalid archive index")
         files = meta.get("files")
@@ -152,9 +153,27 @@ def verify(run: Path) -> dict:
         path = within(run, relative)
         if not path.is_file() or digest(path) != expected:
             raise WorkflowError(f"Missing or changed archived file: {relative}")
+    for identifier, meta in review_ids.items():
+        relative = f"round-reviews/{identifier}/review.json"
+        if relative not in meta["files"]:
+            # Historical review archives remain readable, but cannot prove order.
+            continue
+        receipt = read_json(within(run, relative))
+        source = receipt.get("record")
+        if source not in meta["files"]:
+            raise WorkflowError("Round review source is not in its frozen manifest")
+        review = read_json(within(run, source))
+        if (receipt.get("round") != review.get("round")
+                or receipt.get("next_round_ready") is not bool(review.get("next_round_candidates"))
+                or any(meta.get(key) != receipt.get(key)
+                       for key in ("round", "sequence", "next_round_ready"))):
+            raise WorkflowError("Round review index differs from its frozen record")
     identity = read_json(run / "inputs" / "identity.json")
     for key in ("mode", "input_kind", "case_ids", "targets", "optimization_plan"):
         if config.get(key) != identity.get(key):
+            raise WorkflowError(f"Run identity changed: {key}")
+    for key in ("performance_case_ids", "performance_selection", "round_review_required", "stage_scope"):
+        if (key in config) != (key in identity) or config.get(key) != identity.get(key):
             raise WorkflowError(f"Run identity changed: {key}")
     return config
 
@@ -193,6 +212,67 @@ def target_for(config: dict, stage: str) -> float:
     return config["targets"][key]
 
 
+def performance_fields(manifest: dict, full_ids: list[str]) -> dict:
+    """Validate an explicitly selected performance set without shrinking correctness."""
+    if "performance_case_ids" not in manifest:
+        if "performance_selection" in manifest:
+            raise WorkflowError("performance_selection requires performance_case_ids")
+        return {}
+    ids = manifest["performance_case_ids"]
+    if (not isinstance(ids, list) or len(ids) != 10
+            or any(not isinstance(x, str) for x in ids)
+            or len(set(ids)) != 10 or not set(ids).issubset(full_ids)):
+        raise WorkflowError("Performance set requires exactly 10 unique full-case IDs")
+    selection = manifest.get("performance_selection")
+    if not isinstance(selection, dict) or selection.get("policy") != "fixed10-v1":
+        raise WorkflowError("Explicit performance set requires fixed10-v1 selection")
+    large = selection.get("ultra_large_case_ids")
+    if (not isinstance(large, list) or any(not isinstance(x, str) for x in large)
+            or len(set(large)) != len(large) or len(large) > 3 or not set(large).issubset(ids)):
+        raise WorkflowError("At most 3 selected performance cases may be ultra-large")
+    classification = selection.get("classification")
+    if not isinstance(classification, dict) or not classification.get("definition"):
+        raise WorkflowError("Performance selection needs a frozen scale definition")
+    cases = classification.get("cases")
+    if (not isinstance(cases, dict) or set(cases) != set(full_ids)
+            or any(not isinstance(v, dict) or not isinstance(v.get("ultra_large"), bool)
+                   for v in cases.values())):
+        raise WorkflowError("Scale classification must cover every full correctness case")
+    if set(large) != {x for x in ids if cases[x]["ultra_large"]}:
+        raise WorkflowError("Ultra-large case declarations differ from frozen classification")
+    return {"performance_case_ids": ids, "performance_selection": selection}
+
+
+def check_round(config: dict, next_round: int, *, for_review: bool = False) -> dict:
+    if not 1 <= next_round <= config["optimization_plan"]["rounds"]:
+        raise WorkflowError("Round is outside the frozen optimization plan")
+    reviews = [dict(item, review_id=identifier)
+               for identifier, item in config.get("round_reviews", {}).items()]
+    if any(f"round-reviews/{item['review_id']}/review.json" not in item["files"]
+           for item in reviews):
+        raise WorkflowError("Legacy round reviews lack frozen ordering receipts; inspect before resuming")
+    if config.get("round_review_required"):
+        if not for_review and any(item["round"] >= next_round for item in reviews):
+            raise WorkflowError("Completed rounds cannot be reopened")
+        latest_by_round = {}
+        for item in sorted(reviews, key=lambda item: item["sequence"]):
+            latest_by_round[item["round"]] = item
+        if any(not item["next_round_ready"] and
+               (item["round"] < next_round or not for_review)
+               for item in latest_by_round.values()):
+            raise WorkflowError("A terminal round review prevents further dispatch")
+        if for_review and any(item["round"] > next_round for item in reviews):
+            raise WorkflowError("Cannot revise a round after a later round was reviewed")
+    matches = [item for item in reviews
+               if item["round"] == next_round - 1]
+    if config.get("round_review_required") and next_round > 1 and not matches:
+        raise WorkflowError("Previous round analysis is required before the next round")
+    latest = max(matches, key=lambda item: item["sequence"]) if matches else None
+    if latest and not latest["next_round_ready"]:
+        raise WorkflowError("Previous round review records a stop, not a next-round plan")
+    return {"next_round": next_round, "previous_review": latest}
+
+
 def prepare(args: argparse.Namespace) -> dict:
     run = Path(args.run).absolute()
     config = load_run(run)
@@ -207,11 +287,17 @@ def prepare(args: argparse.Namespace) -> dict:
         if args.candidate or args.reuse_evidence:
             raise WorkflowError("Generation preparation uses the frozen original input only")
     else:
+        if config.get("stage_scope") == "generation_only":
+            raise WorkflowError("generation_only run cannot prepare optimization")
+        if config.get("round_review_required") and args.round is None:
+            raise WorkflowError("Review-gated optimization requires explicit --round")
+        round_number = 1 if args.round is None else args.round
+        round_gate = check_round(config, round_number)
         if not args.candidate or args.candidate not in config["packages"]:
             raise WorkflowError("Optimization preparation requires a frozen G package")
         baseline = args.candidate
         existing_baselines = {
-            item["baseline_package"] for item in config["preparations"].values()
+            item["baseline_package"] for item in archived_preparations(run, config)
             if item["stage"] == "optimization"
         }
         if existing_baselines and existing_baselines != {baseline}:
@@ -222,6 +308,11 @@ def prepare(args: argparse.Namespace) -> dict:
                  (item.get("mode") == "production" and item.get("status") in ("TARGET_MET", "TARGET_UNMET")))
             for item in config["handoffs"].values()
         )
+        if config.get("stage_scope") == "auto" and config["mode"] == "production":
+            decision = generation_decision(run, config, baseline)
+            if decision["next_action"] != "optimize":
+                raise WorkflowError(f"Auto optimization blocked: {decision['next_action']}; record measured R/G acceptance first if needed")
+            valid_generation = True
         if valid_generation:
             if args.reuse_evidence:
                 raise WorkflowError("Reuse evidence applies only when skipping generation")
@@ -255,6 +346,11 @@ def prepare(args: argparse.Namespace) -> dict:
         "optimization_plan": config["optimization_plan"] if args.stage == "optimization" else None,
         "reuse_evidence": evidence, "created_at": now(),
     }
+    for key in ("performance_case_ids", "performance_selection"):
+        if key in config:
+            output[key] = config[key]
+    if args.stage == "optimization":
+        output.update(round=round_number, round_gate=round_gate)
     write_json(destination / "prepare.json", output)
     config["preparations"][identifier] = {
         "stage": args.stage, "baseline_package": baseline,
@@ -276,13 +372,20 @@ def init(args: argparse.Namespace) -> dict:
     if args.mode == "production" and not args.case_manifest:
         raise WorkflowError("Production init requires --case-manifest")
     case_ids = None
+    performance = {}
     if args.case_manifest:
         manifest_source = safe_source(Path(args.case_manifest))
-        case_ids = read_json(manifest_source).get("case_ids")
+        case_manifest = read_json(manifest_source)
+        case_ids = case_manifest.get("case_ids")
         if (not isinstance(case_ids, list) or not case_ids
                 or any(not isinstance(x, str) or not x for x in case_ids)
                 or len(case_ids) != len(set(case_ids))):
             raise WorkflowError("Case manifest requires nonempty unique case_ids")
+        performance = performance_fields(case_manifest, case_ids)
+    if args.mode == "production" and not performance:
+        raise WorkflowError("New production runs require a frozen fixed10-v1 performance selection")
+    if args.optimization_seconds is not None and args.optimization_seconds <= 0:
+        raise WorkflowError("Optimization time budget must be positive")
     if any(run == src or run.is_relative_to(src) for src in sources if src.is_dir()):
         raise WorkflowError("Run cannot be created inside an input directory")
     run.mkdir(parents=True, exist_ok=False)
@@ -309,7 +412,17 @@ def init(args: argparse.Namespace) -> dict:
         "handoffs": {},
         "preparations": {},
     }
+    config.update(performance)
+    if args.optimization_seconds is not None:
+        config["optimization_plan"]["budget_seconds"] = args.optimization_seconds
+    if args.require_round_reviews or args.stage_scope == "auto" or args.mode == "production":
+        config["round_review_required"] = True
+    config["stage_scope"] = args.stage_scope
     identity = {key: config[key] for key in ("mode", "input_kind", "case_ids", "targets", "optimization_plan")}
+    identity.update({key: config[key] for key in
+                     ("performance_case_ids", "performance_selection", "round_review_required", "stage_scope")
+                     if key in config})
+    (run / "inputs").mkdir(exist_ok=True)
     write_json(run / "inputs" / "identity.json", identity)
     config["files"].update(file_manifest(run / "inputs", run))
     write_json(run / "run.json", config)
@@ -353,10 +466,15 @@ def measured_evidence(evidence: dict, stage: str, candidate: str, config: dict) 
     if stage == "generation" and baseline != "original":
         raise WorkflowError("Generation must compare against original")
     full_correctness(evidence, config)
-    ids = evidence["case_ids"]
+    ids = config.get("performance_case_ids", config["case_ids"])
+    if "performance_case_ids" in config:
+        declared = evidence.get("performance_case_ids")
+        if (not isinstance(declared, list) or len(declared) != len(ids)
+                or any(not isinstance(x, str) for x in declared) or set(declared) != set(ids)):
+            raise WorkflowError("Evidence performance_case_ids must equal the frozen performance set")
     baseline_us, candidate_us = evidence.get("baseline_us"), evidence.get("candidate_us")
     if not isinstance(baseline_us, dict) or not isinstance(candidate_us, dict) or set(baseline_us) != set(ids) or set(candidate_us) != set(ids):
-        raise WorkflowError("Measured timing maps must cover exactly case_ids")
+        raise WorkflowError("Measured timing maps must cover exactly the frozen performance IDs")
     def timing(value: object) -> float:
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
             raise WorkflowError("Measurements must be finite positive microseconds")
@@ -369,13 +487,20 @@ def measured_evidence(evidence: dict, stage: str, candidate: str, config: dict) 
 def record_result(args: argparse.Namespace) -> dict:
     run = Path(args.run).absolute()
     config = load_run(run)
-    preparation = config["preparations"].get(args.preparation)
-    if not preparation or preparation["stage"] != args.stage:
+    metadata = config["preparations"].get(args.preparation)
+    relative = f"preparations/{args.preparation}/prepare.json"
+    if not metadata or relative not in metadata["files"]:
+        raise WorkflowError("Result requires a matching preparation ID")
+    preparation = read_json(within(run, relative))
+    if preparation["stage"] != args.stage:
         raise WorkflowError("Result requires a matching preparation ID")
     if args.candidate not in config["packages"] or args.candidate == "original":
         raise WorkflowError("Select a frozen candidate package")
     if args.stage == "optimization" and args.candidate == preparation["baseline_package"]:
         raise WorkflowError("Optimization result must use a new candidate package")
+    if args.stage == "generation":
+        # Reject a changed G or invalid prior acceptance before any archive writes.
+        generation_decision(run, config, args.candidate)
     skill = safe_source(Path(args.skill), allow_link=True)
     if not skill.is_file():
         raise WorkflowError("Skill entry must be a file")
@@ -416,11 +541,171 @@ def record_result(args: argparse.Namespace) -> dict:
         "optimization_plan": config["optimization_plan"] if args.stage == "optimization" else None,
         "created_at": now(),
     }
+    for key in ("performance_case_ids", "performance_selection", "stage_scope"):
+        if key in config:
+            output[key] = config[key]
     write_json(target_dir / "handoff.json", output)
     files = file_manifest(target_dir, run)
     config["handoffs"][identifier] = {"stage": args.stage, "candidate_package": args.candidate, "files": files, "status": status, "mode": config["mode"]}
     save_index(run, config)
-    return {"result_id": identifier, "status": status, "speedup_geomean": speedup, "target_speedup": target_for(config, args.stage), "path": str(target_dir / "handoff.json")}
+    result = {"result_id": identifier, "status": status, "speedup_geomean": speedup, "target_speedup": target_for(config, args.stage), "path": str(target_dir / "handoff.json")}
+    if args.stage == "generation":
+        result["decision"] = generation_decision(run, config, args.candidate)
+    return result
+
+
+def archived_preparations(run: Path, config: dict) -> list[dict]:
+    records = []
+    for identifier, metadata in config["preparations"].items():
+        relative = f"preparations/{identifier}/prepare.json"
+        if relative not in metadata["files"]:
+            raise WorkflowError("Preparation record is not in its frozen manifest")
+        records.append(read_json(within(run, relative)))
+    return records
+
+
+def generation_decision(run: Path, config: dict, candidate: str) -> dict:
+    """Route only from hash-verified archived acceptance evidence for this G."""
+    if candidate not in config["packages"] or candidate == "original":
+        raise WorkflowError("Decision requires a distinct frozen G package")
+    baseline = {item["baseline_package"] for item in archived_preparations(run, config)
+                if item["stage"] == "optimization"}
+    if baseline and baseline != {candidate}:
+        raise WorkflowError("Optimization G baseline is fixed for this run")
+    accepted = []
+    for identifier, metadata in config["handoffs"].items():
+        relative = f"handoffs/{identifier}/handoff.json"
+        if relative not in metadata["files"]:
+            raise WorkflowError("Decision requires a manifested handoff record")
+        handoff = read_json(within(run, relative))
+        if handoff.get("stage") != "generation" or handoff.get("candidate_package") != candidate:
+            continue
+        if config["mode"] != "production":
+            continue
+        if handoff.get("mode") != "production":
+            raise WorkflowError("Generation acceptance mode differs from run")
+        speedup, target = measured_evidence(handoff.get("evidence") or {}, "generation", candidate, config)
+        preparation_id = handoff.get("preparation_id")
+        preparation_metadata = config["preparations"].get(preparation_id)
+        preparation_relative = f"preparations/{preparation_id}/prepare.json"
+        if not preparation_metadata or preparation_relative not in preparation_metadata["files"]:
+            raise WorkflowError("Generation acceptance requires its frozen preparation")
+        preparation = read_json(within(run, preparation_relative))
+        if (preparation.get("stage") != "generation"
+                or preparation.get("mode") != config["mode"]
+                or preparation.get("baseline_package") != "original"
+                or handoff.get("baseline_package") != preparation.get("baseline_package")
+                or handoff["evidence"].get("baseline_package") != handoff.get("baseline_package")):
+            raise WorkflowError("Generation acceptance baseline/preparation binding differs")
+        accepted.append((identifier, speedup, target))
+    scope = config.get("stage_scope", "full")
+    output = {"stage_scope": scope, "candidate_package": candidate,
+              "correctness_status": "UNVERIFIED", "performance_status": "UNMEASURED",
+              "next_action": "acceptance_required", "acceptance_result_ids": []}
+    if not accepted:
+        return output
+    # Multiple paired acceptances may disagree; never choose a convenient pass.
+    outcomes = {speedup >= target for _, speedup, target in accepted}
+    output["correctness_status"] = "FULL_PASS"
+    output["acceptance_result_ids"] = [identifier for identifier, _, _ in accepted]
+    output["target_speedup"] = target_for(config, "generation")
+    if len(outcomes) != 1:
+        output.update(performance_status="CONFLICTING", next_action="acceptance_required")
+        return output
+    met = outcomes.pop()
+    output["performance_status"] = "TARGET_MET" if met else "TARGET_UNMET"
+    output["next_action"] = ("deliver_G" if scope == "generation_only" or (scope == "auto" and met)
+                             else "optimize")
+    return output
+
+
+def record_round_review(args: argparse.Namespace) -> dict:
+    run = Path(args.run).absolute()
+    config = load_run(run)
+    source = safe_source(Path(args.record))
+    review = read_json(source)
+    number = review.get("round")
+    if isinstance(number, bool) or not isinstance(number, int):
+        raise WorkflowError("Round review requires an integer round")
+    if config.get("stage_scope") == "generation_only":
+        raise WorkflowError("generation_only run cannot record optimization reviews")
+    check_round(config, number, for_review=True)
+    candidates = review.get("candidates")
+    width = config["optimization_plan"]["candidates_per_round"]
+    if not isinstance(candidates, list) or len(candidates) != width:
+        raise WorkflowError("Round review must account for every candidate slot")
+    ids, sources = set(), [source]
+    perf_ids = set(config.get("performance_case_ids", config["case_ids"]) or [])
+    statuses = {"evaluated", "precision_failed", "build_failed", "timeout", "cancelled", "static_rejected"}
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            raise WorkflowError("Invalid candidate review")
+        identifier = candidate.get("candidate_id")
+        if not isinstance(identifier, str) or not identifier.strip() or identifier in ids:
+            raise WorkflowError("Round candidate IDs must be nonempty and unique")
+        ids.add(identifier)
+        if candidate.get("status") not in statuses:
+            raise WorkflowError("Every candidate needs a terminal status")
+        artifacts = candidate.get("artifacts")
+        if not isinstance(artifacts, list) or not artifacts:
+            raise WorkflowError("Every candidate analysis must cite raw evidence")
+        sources.extend(safe_source(Path(p)) for p in artifacts if isinstance(p, str))
+        if any(not isinstance(p, str) for p in artifacts):
+            raise WorkflowError("Invalid round artifact path")
+        analysis = candidate.get("analysis")
+        if not isinstance(analysis, dict) or analysis.get("status") not in {"confirmed", "hypothesis", "unknown"}:
+            raise WorkflowError("Analysis status must be confirmed, hypothesis or unknown")
+        for field in ("observations", "explanation", "next_experiment", "expected_observation"):
+            if not isinstance(analysis.get(field), str) or not analysis[field].strip():
+                raise WorkflowError(f"Candidate analysis requires {field}")
+        slow_cases = analysis.get("slow_cases")
+        if not isinstance(slow_cases, list) or (candidate["status"] == "evaluated" and not slow_cases):
+            raise WorkflowError("Evaluated candidates require slow-case evidence")
+        seen = set()
+        for item in slow_cases:
+            case_id = item.get("case_id") if isinstance(item, dict) else None
+            if not isinstance(case_id, str) or case_id not in perf_ids or case_id in seen:
+                raise WorkflowError("Slow-case IDs must be unique frozen performance IDs")
+            seen.add(case_id)
+            for key in ("baseline_us", "candidate_us"):
+                value = item.get(key)
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+                    raise WorkflowError("Slow-case timing must be finite positive microseconds")
+    next_candidates = review.get("next_round_candidates")
+    if not isinstance(next_candidates, list):
+        raise WorkflowError("Round review requires next_round_candidates")
+    stop = review.get("stop_reason")
+    if number == config["optimization_plan"]["rounds"] or stop:
+        if next_candidates or (stop is not None and (not isinstance(stop, str) or not stop.strip())):
+            raise WorkflowError("Stopped/final round must not schedule further candidates")
+    else:
+        if len(next_candidates) != width:
+            raise WorkflowError("Next round requires one evidence-backed hypothesis per slot")
+        for proposal in next_candidates:
+            if not isinstance(proposal, dict):
+                raise WorkflowError("Invalid next-round proposal")
+            for field in ("hypothesis_id", "mechanism_change", "rationale", "falsifier"):
+                if not isinstance(proposal.get(field), str) or not proposal[field].strip():
+                    raise WorkflowError(f"Next-round proposal requires {field}")
+            parents = proposal.get("source_candidate_ids")
+            expected = proposal.get("expected_case_ids")
+            if (not isinstance(parents, list) or not parents or any(not isinstance(x, str) for x in parents)
+                    or not set(parents).issubset(ids)
+                    or not isinstance(expected, list) or not expected
+                    or any(not isinstance(x, str) for x in expected) or not set(expected).issubset(perf_ids)):
+                raise WorkflowError("Hypotheses must reference current evidence and expected performance cases")
+    identifier = new_id("round-review")
+    target = run / "round-reviews" / identifier
+    copy_inputs(sources, target / "references")
+    reviews = config.setdefault("round_reviews", {})
+    sequence = max((item["sequence"] for item in reviews.values()), default=0) + 1
+    metadata = {"round": number, "sequence": sequence, "next_round_ready": bool(next_candidates)}
+    write_json(target / "review.json", dict(metadata,
+               record=(target / "references" / f"000-{source.name}").relative_to(run).as_posix()))
+    metadata["files"] = file_manifest(target, run)
+    reviews[identifier] = metadata
+    save_index(run, config)
+    return {"review_id": identifier, "round": number, "next_round_ready": bool(next_candidates), "path": str(target)}
 
 
 def execution_links(run: Path) -> dict:
@@ -498,6 +783,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--optimization-target", type=float, default=1.5)
     p.add_argument("--rounds", type=int, default=5)
     p.add_argument("--variants", type=int, default=5)
+    p.add_argument("--optimization-seconds", type=int)
+    p.add_argument("--require-round-reviews", action="store_true")
+    p.add_argument("--stage-scope", choices=["auto", "full", "generation_only"], default="auto")
     p = sub.add_parser("freeze")
     p.add_argument("--run", required=True)
     p.add_argument("--package", required=True)
@@ -507,6 +795,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--skill", required=True)
     p.add_argument("--candidate")
     p.add_argument("--reuse-evidence")
+    p.add_argument("--round", type=int)
     p = sub.add_parser("result")
     p.add_argument("--run", required=True)
     p.add_argument("--stage", choices=list(TARGETS), required=True)
@@ -527,6 +816,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--evo-dir")
     p.add_argument("--artifact", action="append", default=[])
     p.add_argument("--result")
+    p = sub.add_parser("round-review", help="archive per-candidate diagnoses and next hypotheses")
+    p.add_argument("--run", required=True)
+    p.add_argument("--record", required=True)
+    p = sub.add_parser("round-check", help="verify the previous analysis before selecting a new round")
+    p.add_argument("--run", required=True)
+    p.add_argument("--next-round", required=True, type=int)
+    p = sub.add_parser("decision", help="route from verified frozen generation acceptance")
+    p.add_argument("--run", required=True)
+    p.add_argument("--candidate", required=True)
     for name in ("inspect", "verify", "show"):
         p = sub.add_parser(name)
         p.add_argument("--run", required=True)
@@ -542,6 +840,16 @@ def main(argv: list[str] | None = None) -> int:
             result = record_result(args)
         elif args.command == "link":
             result = link_execution(args)
+        elif args.command == "decision":
+            run = Path(args.run).absolute()
+            result = generation_decision(run, load_run(run), args.candidate)
+        elif args.command == "round-review":
+            result = record_round_review(args)
+        elif args.command == "round-check":
+            config = load_run(Path(args.run).absolute())
+            if config.get("stage_scope") == "generation_only":
+                raise WorkflowError("generation_only run cannot enter optimization")
+            result = check_round(config, args.next_round)
         elif args.command == "show":
             run = Path(args.run).resolve(strict=True)
             read_run(run)

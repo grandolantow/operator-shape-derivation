@@ -9,6 +9,7 @@
 - 每次交接的发送内容、真实读取的skill入口与哈希、接收方确认、时间、前后阶段及下一步。
 - 双端协作的执行身份、dispatch ID、接收与实际执行证据、监工观察/纠偏/落实记录；使用[执行协议](execution-modes.md)，不要把已提交当已执行。
 - 生成工作副本、design、未完成假设、build/验证原始日志、源码与库哈希。
+- 新生成/主要路线变更的[实现前设计评审](generation-design-review.md)：路线支持域/精度证据、分组操作粒度成本、作者回应、独立复核及 `design_check.py` 回执；评审绑定完整作者记录和设计/合同/workload/环境身份。随工程及 generation evidence artifacts 归档，不能用静态实现放行替代已测正确性/性能；旧run不补写身份。
 - 采用 C/V 分支时，保留实现选型记录、版本化边界、父/组件 case 映射和完整组合 runner；组件、组合证据分别归档。
 - 优化起点G快照、每轮每候选的假设/路径/设备/验证/耗时/否决原因；保留冠军及失败方向。
 - 最终报告、逐case绝对时间、原始样本、复现命令和限制。不能只有报告而没有支撑记录。
@@ -17,13 +18,15 @@
 
 ## 目标与状态
 
-生成目标：R/G ≥1.2。优化目标：固定G/O ≥1.5。GM默认对完整冻结case等权，若用户指定业务权重或逐case目标则以合同为准。报告退化比例和最差case；不合格/漏测case不能从分母删除。
+生成目标：R/G ≥1.2。优化目标：固定G/O ≥1.5。新任务 GM 对预先冻结的10例性能case等权，超大例不超过3例；正确性仍覆盖全部冻结case。旧 run 未声明性能子集时保留原全量计时语义。若用户指定业务权重或逐case目标则以合同为准。报告退化比例和最差case；不合格/漏测case不能从分母删除。
+
+新任务的性能子集、全量规模分类、`round_review_required`、`stage_scope` 与优化秒数随 `init` 冻结。每轮候选全部终态后追加 `round-review` 与原始证据；下一轮每次 SELECT/dispatch 前调用 `round-check`，并将候选映射到上一轮分析假设。未知根因可如实记录，但必须有具体区分实验。详见 [性能与逐轮分析](performance-and-round-review.md)。
 
 lingxi等工具的内部相对PyTorch分数单列 `engine_score`。不要把内部target_speedup=1.5直接当成G/O=1.5；记录本轮adapter如何测量、聚合和决定停止。若无法控制内部早停，按剩余总预算恢复并记录，不能重置轮数或伪造达标。
 
 G的全量正确性与性能有效，但R/G不足1.2时，可在原授权内交接优化，保留生成目标未达标。优化不得更换G为新冠军。已有AscendC复用路径G=validated_existing，首次生成目标不适用而非通过。
 
-完整任务的 G 交接是阶段节点，下一步必须实际调用进化，不能据此关闭父任务。按[连续推进与停止判定](continuation.md)记录任务范围、真实执行证据和停止原因；阶段 TARGET_UNMET 不自动意味着父任务已完成。
+默认 auto 的 G 交接后先依据有效验收证据做 decision：达标复核交付 G，优化 NOT_NEEDED；未达标实际进入进化。显式 full 的 G 交接仍仅是阶段节点，必须执行已授权进化。按[连续推进与停止判定](continuation.md)记录任务范围、真实执行证据和停止原因；阶段 TARGET_UNMET 不自动意味着父任务已完成。
 
 任务报告状态采用事实：PREPARED、WAITING_INPUT、WAITING_RESOURCES、RUNNING、CORRECTNESS_FAILED、TARGET_UNMET、VERIFIED等。辅助脚本的 prepare 返回 preparation_id，只表示交接文件可用，不表示接收skill已执行；result 的实际状态为 REHEARSAL、TARGET_MET 或 TARGET_UNMET。任务阶段状态由协调者根据真实证据维护，不与CLI输出混称。生产完成还需主协调者复核原始记录。
 

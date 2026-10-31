@@ -21,7 +21,9 @@ import sys
 from pathlib import Path
 
 
-GEN = "tilelang2ascendc-ops-generator"
+GEN = "ops-direct-invoke"
+GEN_AGENTS = {"ascendc-kernel-architect", "ascendc-kernel-design-reviewer",
+              "ascendc-kernel-developer", "ascendc-kernel-reviewer"}
 EVO = "ops-perf-evolution"
 MANIFEST = ".agents/ascend-op-workflow-install.json"
 PACKAGE = Path(__file__).resolve().parent
@@ -94,6 +96,8 @@ def frontmatter_skills(path: Path, required: bool = True) -> list[str]:
         return []
     names = []
     for line in header[start + 1 :]:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
         match = re.fullmatch(r"\s+-\s+([A-Za-z0-9_-]+)\s*", line)
         if not match:
             break
@@ -110,7 +114,7 @@ def required_agents(plugin: Path, pattern: str) -> list[Path]:
 
 def source_skill(plugin: Path, shared: Path, name: str, local_first: bool) -> Path:
     roots = (plugin / "skills", shared) if local_first else (shared, plugin / "skills")
-    for root in roots:
+    for root in (*roots, shared.parent / "infra"):
         candidate = root / name
         if (candidate / "SKILL.md").is_file():
             return candidate.resolve()
@@ -141,16 +145,16 @@ def discover(repo: Path | None, workflow: Path) -> tuple[dict[str, Path], dict]:
         skills, origins = {}, {}
         packaged_skills(skills, origins, workflow)
         return skills, {"skill_origins": origins, "vendor_contracts": {}, "vendor_agents": {}}
-    gen = repo / "plugins-community" / GEN
+    gen = repo / "plugins-official" / GEN
     evo = repo / "plugins-community" / EVO
     shared = repo / "ops"
     for source in (gen / "init.sh", gen / "AGENTS.md", evo / "init.sh", evo / "AGENTS.md", workflow / "SKILL.md"):
         if not source.is_file():
             raise InstallError(f"Missing source: {source}")
-    gen_agents = required_agents(gen, "tilelang2ascendc-kernel-generator*")
+    gen_agents = required_agents(gen, "ascendc-kernel-*")
     evo_agents = required_agents(evo, "*-*")
     expected_evo = {"lingxi-evo", "lingxi-partial", "ops-evo", "ops-partial"}
-    if not gen_agents or expected_evo - {agent.stem for agent in evo_agents}:
+    if GEN_AGENTS - {agent.stem for agent in gen_agents} or expected_evo - {agent.stem for agent in evo_agents}:
         raise InstallError("Missing required generation or evolution agent declarations")
     result: dict[str, Path] = {}
     origins: dict[str, list[str]] = {}
@@ -200,13 +204,18 @@ def route_text(repo: Path | None) -> bytes:
             "its `references/mindie.md`. Codex executes generation and optimization by default; "
             "Claude is optional. Generation and optimization consume substantial tokens; "
             "recommend a regular coding model and medium effort.\n\n"
+            "Default auto scope generates the first implementation directly, then runs lightweight acceptance: "
+            "full correctness and the frozen 10 performance cases, at most 3 ultra-large. "
+            "Deliver G when the target is met; enter optimization only when it is unmet, unless "
+            "the user explicitly requests full scope. Do not preselect implementation structure; "
+            "every optimization round needs causal analysis before further dispatch.\n\n"
             "Shape/workload preparation is available without CANNBot. When a stage needs CANNBot, "
             "reuse the task's known checkout or ask whether to install it or select an existing one. "
             "If installation is declined, continue independent steps and report the missing dependency. "
             "Read original CANNBot instructions and use available tools; do not modify CANNBot, "
             "register Claude agents in Codex, or assume Claude hooks run.\n"
         ).encode("utf-8")
-    gen = repo / "plugins-community" / GEN / "AGENTS.md"
+    gen = repo / "plugins-official" / GEN / "AGENTS.md"
     evo = repo / "plugins-community" / EVO / "AGENTS.md"
     return (
         "# Ascend operator workflow for Codex\n\n"
@@ -226,7 +235,17 @@ def route_text(repo: Path | None) -> bytes:
         "assigned executor, and verify submission, acknowledgement, execution and raw evidence. "
         "Do not start a duplicate worker or periodic monitoring without current authorization. "
         "For direct execution, use available Codex tools and the source AGENTS.md plus its "
-        "`tilelang2ascendc-kernel-generator` agent reference. "
+        "`ascendc-kernel-architect`, `ascendc-kernel-design-reviewer`, "
+        "`ascendc-kernel-developer` and `ascendc-kernel-reviewer` references. "
+        "Generate AscendC directly using the Step 1-7 direct-invoke pipeline and its "
+        "`workflows/task-prompts.md` templates. "
+        "Default auto scope generates the first implementation directly, then runs lightweight acceptance: "
+        "full correctness and the frozen 10 performance cases, at most 3 ultra-large. "
+        "Record measured R/G evidence and run workflow.py decision: deliver G when the target is met; "
+        "enter optimization only when it is unmet, unless the user explicitly requests full scope. "
+        "Missing or conflicting measurements require acceptance work. Do not preselect kernel count, "
+        "C/V splitting or intermediate GM layout. Every optimization round needs causal analysis "
+        "and evidence-backed next hypotheses before further dispatch. "
         "Before optimization, freeze the fully correct G package and read the evolution AGENTS.md "
         "and the relevant `ops-evo`/`lingxi-evo` plus partial agent references. The original agent "
         "names and source hashes are in `.agents/ascend-op-workflow-install.json` under `vendor_agents`.\n\n"
@@ -238,8 +257,9 @@ def route_text(repo: Path | None) -> bytes:
         "and `verify` commands for task records; their schema checks do not prove that raw logs "
         "match claimed measurements.\n\n"
         "Remote generation or optimization still requires the full CANNBot source and its documented "
-        "environment. Run vendor scripts from the required working directory so their relative "
-        "`workflows/`, `asc-devkit/`, hook and build resources resolve. This Windows skill snapshot "
+        "environment. Resolve source scripts and templates by their absolute paths and run with the "
+        "task as the working directory so generated operators stay task-local. Resolve `workflows/`, "
+        "`asc-devkit/`, hook and build resources from their documented source roots. This Windows skill snapshot "
         "does not install Linux asc-devkit/workflows/hooks or independently provide a compile-ready "
         "NPU environment.\n"
     ).encode("utf-8")

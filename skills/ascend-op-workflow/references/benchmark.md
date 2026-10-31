@@ -15,7 +15,7 @@
 | manifest | IDs、来源、推导/假设、功能覆盖、seed与输入关联 |
 | inputs | 关联metadata/索引/state构造和reset；无需时可采用框架标准输入生成 |
 | reference | 原始数学语义/依赖与独立正确性参照的定位 |
-| runner | 计时边界、状态恢复、warmup和全量覆盖；可复用已验证runner |
+| runner | 计时边界、状态恢复、warmup；正确性全量、性能固定10例（超大≤3）；可复用已验证runner |
 | contract | 精度/数值语义、正式性能协议、支持域、基线、资源边界 |
 
 读取目标仓库的 schema 和 loader，不假定 workload 必须叫 `.json` 或 `.jsonl`，也不通过物理行数判断 case 数。保留 definition/workload 的原生布局，将额外 manifest 放在 loader 不会误识别的位置。
@@ -38,6 +38,6 @@
 
 进入 [C→V 串行分支](cv-serial.md)时，从父 workload 派生 C、V 的 definition/workload/reference 与输入构造，按实际仓库规范放入独立目录并分别验证 loader。组件形状由计算边界推导，不能只复制父输入 shape。
 
-manifest 保留 `parent_case_id`、组件 case ID、输入/metadata/seed 来源、边界修订；分 chunk 时补覆盖范围、执行顺序、尾块和合并规则。组件测量可按等价结构分组筛选，但父任务精度和性能仍覆盖原完整 case 与既定权重。新增邻近 shape 作为独立覆盖集，不混入原始统计分母。
+manifest 保留 `parent_case_id`、组件 case ID、输入/metadata/seed 来源、边界修订；分 chunk 时补覆盖范围、执行顺序、尾块和合并规则。组件测量可按等价结构分组筛选，但父任务正确性覆盖原完整case，性能覆盖冻结的10例及既定权重，每个被测父case的完整工作量均须保留。新增邻近shape作为独立正确性覆盖集，不混入原始性能分母。
 
 V 的独立输入由 reference 或已核实 fixture 生成；实际 C→V 组合另测。对齐逻辑/物理布局、舍入及有效区，不能通过额外 contiguous/pad/cast 偷换合同。完整 runner 负责所有 chunk 和实时适配，部署组件问题不代表父算子已经通过。

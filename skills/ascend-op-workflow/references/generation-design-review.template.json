@@ -1,0 +1,47 @@
+{
+  "schema": "generation-design-review-v1",
+  "artifacts": {
+    "design": {"path": "DESIGN.md", "sha256": ""},
+    "contract": {"path": "OPERATOR_CONTRACT.md", "sha256": ""},
+    "workload": {"path": "case-manifest.json", "sha256": ""},
+    "environment": {"path": "environment.md", "sha256": ""}
+  },
+  "author": "",
+  "reviewer": "",
+  "coverage_basis": "",
+  "matrix_contractions": {"applicable": null, "reason": "", "operations": []},
+  "route_options": [
+    {"primitive": "", "support_domain": "", "precision": "", "workspace_and_adaptation": "", "support_status": "unknown", "support_finding_id": "", "evidence": [], "selection_reason": ""}
+  ],
+  "geometry_groups": [
+    {
+      "id": "",
+      "geometry": "",
+      "selected_route": "",
+      "cost_basis": "",
+      "costs": {
+        "reduction_calls": {"status": "unknown", "scope": "", "estimate": "", "basis": ""},
+        "scalar_ub_accesses": {"status": "unknown", "scope": "", "estimate": "", "basis": ""},
+        "synchronization": {"status": "unknown", "scope": "", "estimate": "", "basis": ""},
+        "dma_calls": {"status": "unknown", "scope": "", "estimate": "", "basis": ""},
+        "dma_granularity": {"status": "unknown", "scope": "", "estimate": "", "basis": ""},
+        "padding_and_tails": {"status": "unknown", "scope": "", "estimate": "", "basis": ""},
+        "repeated_input_reads": {"status": "unknown", "scope": "", "estimate": "", "basis": ""}
+      }
+    }
+  ],
+  "route_selection_reason": "",
+  "findings": [
+    {"id": "", "observation": "", "author_response": "", "validation_plan": ""}
+  ],
+  "review": {
+    "assessment_sha256": "",
+    "correctness_feasibility": "unknown",
+    "performance_feasibility": "unknown",
+    "decision": "revise",
+    "rationale": "",
+    "findings": [
+      {"id": "", "status": "open", "reviewer_rationale": ""}
+    ]
+  }
+}
