@@ -31,6 +31,12 @@ Linux Codex 同样运行 `python3 "$workflow/install_codex.py" --task-dir "$task
 
 MindIE 入口、默认 Codex 的真实生成/进化和作业关联见 [MindIE 接入参考](../skills/ascend-op-workflow/references/mindie.md)。执行前提示 token 成本较大，建议常规代码模型和中等 effort；Claude 仅在明确选择后配置。
 
+## 内置 CANNBot 适配
+
+四个适配脚本和轻量/原生执行说明随 `.agents/skills/ascend-op-workflow` 整体安装，内容哈希包含在原 manifest 中；不需要独立的 `cannbot-codex` 包，也不携带 vendor。生成/优化时指定当前执行环境中的完整 CANNBot checkout；远端同时部署 workflow 技能和 CANNBot，不复制本机绝对路径。
+
+`--cannbot-root` 指定的是原始 CANNBot checkout，不是适配包。其原始技能快照作为参考，Codex 优化优先按 workflow 的[执行适配入口](../skills/ascend-op-workflow/references/cannbot-execution.md)选择轻量/native，调用本技能的脚本；无需另注册同名 `ops-perf-evolution` 适配 skill。首次在新环境可运行 `python <已安装技能>/scripts/cannbot/prepare_workspace.py --help` 检查入口，再按实际需要准备任务资源。安装不启动作业、不安装 CANN/torch-npu，也不保证外部 evaluator 缺失依赖已补齐。
+
 ## Linux Claude
 
 ```bash

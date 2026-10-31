@@ -23,10 +23,10 @@ python /path/to/workflow/install_codex.py --task-dir /path/to/task --apply
 1. **输入与 workload**：按主 Skill 推导 shape，准备 definition/reference/inputs/workload，使用实际 benchmark schema/loader 检查。冻结完整 case、oracle、R、计时协议、写范围和预算。通过原 `workflow.py init/prepare generation` 记录父任务与 preparation。
 2. **Codex 生成**：读取 CANNBot 的 `plugins-official/ops-direct-invoke/AGENTS.md`、四个 `agents/ascendc-kernel-*.md` 及 `workflows/task-prompts.md`。按原始模板实施环境、设计、设计审核、开发、代码审核、修复、全量验证和报告步骤；使用原生子 agent 承接角色，记录角色复用和审核独立性。所有新实现直接生成 AscendC，不进入 TileLang 设计/转译。Claude 专属语法由实际 Codex 工具承接；模板和 SDK 来源保持只读，不能以读取入口替代实际分阶段执行。
 3. **冻结 G**：真实生成和完整验证完成后，用 `freeze/result generation` 归档 G 与原始证据。G 全量正确且正式性能有效即可交接；生成目标未达记录 TARGET_UNMET，不伪造通过，也不阻止已授权优化。已有匹配 AscendC 时按原复用合同跳过生成。
-4. **Codex 优化**：用固定 G 创建 `prepare optimization`；读取 CANNBot 的 `plugins-community/ops-perf-evolution/AGENTS.md`，按工程选择 `agents/lingxi-evo.md` 或 `agents/ops-evo.md` 及相应 partial 参考。直接使用该版本的世界模型/状态脚本，推进 GATE → SELECT → GENERATE → REFINE → REACT → CHECKPOINT；策略选择、候选执行、评测回树均须真实发生。Claude 专属工具语法由 Codex 的实际工具承接，不启动 Claude 以满足角色名，也不另写一套搜索状态机。
+4. **Codex 优化**：用固定 G 创建 `prepare optimization`；先读本 workflow 的[CANNBot 执行适配](cannbot-execution.md)，默认走轻量入口，显式 native 或已有原生 state/anchor 才沿用完整模式。读取外部 CANNBot 的 `agents/lingxi-evo.md` 或 `agents/ops-evo.md` 及相应 partial 作为角色参考；使用该 checkout 的真实世界模型/评测脚本，以及随本 workflow 安装的评分兼容、预约和适用的全量守卫。策略选择、候选执行、评测回树均须真实发生。Claude 专属语法由当前宿主真实工具承接，不启动 Claude 以满足角色名，也不另写搜索状态机。
 5. **回收**：按合同完整复测最终 O，使用原评测器生成同条件 G/O 证据，`freeze/result optimization/verify` 收尾。原内部 score 的分母若是 PyTorch，保留其含义；正式优化目标仍是固定 G/O。精度、有效性能、目标达成分别报告，预算结束可交付 TARGET_UNMET。
 
-必要适配仅放 workflow 或任务工程；不得修改 CANNBot 的脚本、模板、Skill/Agent/Hook、已有脏文件或其中的 workflow 副本。若现有接口不能支撑步骤，报告具体限制。例如需要保留 profile 时，已知 quick shell 包装未透传 `--keep-prof`，可直接调用原 `msprof_perf_summary.py` 的对应 Python 入口，不修共享包装器、不复制评测器。
+必要适配由本 workflow 的 `scripts/cannbot/` 和执行参考统一维护并随技能安装；不依赖原开发机的 `tools/cannbot-codex`、vendor 或私有 source manifest。执行环境须能读取已安装 workflow 和指定 CANNBot checkout，本地/远端各自解析路径并记录版本。不得修改 CANNBot 的脚本、模板、Skill/Agent/Hook、已有脏文件或其中的 workflow 副本。若现有接口不能支撑步骤，报告具体限制。例如需要保留 profile 时，已知 quick shell 包装未透传 `--keep-prof`，可直接调用原 `msprof_perf_summary.py` 的对应 Python 入口，不修共享包装器、不复制评测器。
 
 ## 远端作业与关联
 
@@ -57,7 +57,7 @@ python "$WORKFLOW_CLI" show --run "$RUN"
 
 ## 已知限制与交付状态
 
-所测 CANNBot 版本的原世界树校验拒绝 `best_score<1`，即使候选全量正确、搜索状态已完成；原 HTML 报告在 `hw_params=null` 时抛出异常。这两项在上述案例中均失败。保留真实分数、退出状态和错误日志，不改 CANNBot、不钳制分数、不另建世界树校验器。只有归档通过时，不得汇报“全部门禁通过”。
+历史所测 CANNBot 版本的原世界树校验拒绝 `best_score<1`，即使候选全量正确、搜索状态已完成；原 HTML 报告在 `hw_params=null` 时抛出异常。这两项在上述案例中均失败。当前 workflow 已内置窄兼容：对明确 PyTorch 分母的有限正分数，调用原生 validator 并仅过滤已知分数下限错误，原生结果单列；未知结构错误仍拒绝。不改 CANNBot、不钳制分数、不重写其 schema/validator。历史失败记录保留，离线兼容回归不等于原任务已完成。只有归档通过时，不得汇报“全部门禁通过”。
 
 HTML 是可选展示产物；失败时继续交付 Markdown 结论、源码、case、JSON 结果和原始日志，并明确报告未生成 HTML。归档完整性、全量正确性、性能测量有效性、目标达成、原工具校验/报告状态分别说明。缺失或失败的必要精度/评测步骤仍阻止相应阶段通过；可选报告失败不能覆盖已完成的真实执行结果。
 

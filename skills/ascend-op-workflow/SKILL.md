@@ -55,9 +55,9 @@ workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/�
 3. **外部合同冻结**：将接口、精度、全量正确性与10例性能集合、超大分类、计时、R/G身份、环境、预算和不可变项写入OPERATOR_CONTRACT；归档源码和输入哈希。新正式run自动强制固定10例与逐轮复盘；按合同传 `--optimization-seconds`（默认约定18000），用户预算优先；仅生成再加 `--stage-scope generation_only`。旧run不原地补写身份字段。仅选定 C/V 路线后冻结该修订的内部接口；不得把它预设为所有首版的约束。
 4. **直接生成首版（按需复用）**：由Codex负责，按[生成设计评审](references/generation-design-review.md)完成路线核查、操作粒度成本表和独立性能可行性评审，再将已核对的设计记录及检查回执随任务交给开发者；不强制首版前进行多路线性能搜索。通过 `ops-direct-invoke` 生成缺失AscendC部分；C/V分支另完成[选型与边界冻结](references/cv-serial.md)。向真实生成角色传入工作副本、合同、完整正确性集合、固定10例性能集合和父目标；首个全量正确版本立即冻结G，随后按同协议测量性能并核对原始日志/库身份。设计记录纳入工程归档；结构或操作粒度实质偏离已审设计时先回报design_issue并复审，已冻结G则作为O对原G优化。本阶段的合格实测证据供第5阶段直接验收，不为切换阶段重复测量。用户要求与直接生成比较时，按[生成对照](references/generation-comparison.md)建立隔离且同条件的两路；不将准备prompt称作已生成。
 5. **轻量验收与建立G**：轻量指先做一次完整的验收决策、不预先展开进化搜索，不减少全量精度、固定10例、预热/重复或源码/库身份检查。冻结首个全量正确版本，完成同协议 R/G 测量并记录 generation result；调用 CLI `decision` 读取已归档证据。`auto` 下达标交付 G，优化记 `NOT_NEEDED`；未达生成目标记录 `GENERATION_TARGET_UNMET` 并进入优化。没有正确性或有效性能证据时先修复/补测，不作达标推断。完整已有 AscendC 复用路线记 generation=SKIPPED_REUSED，验证不可跳过。新 C→V 组合需 C 独立、V 独立和组合验证；G 包括 C、V、边界、适配及统一 runner，不能用组件通过替代父任务通过。
-6. **按需进入进化**：仅在 `auto` 验收性能未达标，或用户明确选择 `full` 持续优化时，按所选Codex＋Claude协作或Codex独立模式，读取并实际调用 `ops-perf-evolution` 的适用入口；显式传父任务剩余预算（默认最多5轮/每轮5候选）、固定G、目标（默认1.5×）和正式计时协议，核实接收及真实候选执行证据。
+6. **按需进入进化**：仅在 `auto` 验收性能未达标，或用户明确选择 `full` 持续优化时，按所选Codex＋Claude协作或Codex独立模式，读取本 workflow 的[CANNBot 执行适配](references/cannbot-execution.md)，由其轻量/原生入口实际调用外部 `ops-perf-evolution`；显式传父任务剩余预算（默认最多5轮/每轮5候选）、固定G、目标（默认1.5×）和正式计时协议，核实接收及真实候选执行证据。
 
-   新优化任务默认使用 adapter 的轻量路径：复用 `prepare optimization` 中 `baseline_acceptance` 指向的有效验收，只准备本轮候选；不为阶段切换重复构建/测量 G，也不预先铺开完整策略树、另一套 session/state/ledger 或 HTML。正式合同、G 身份、轮次与预算由父任务持续维护；用户选择的 `stage_scope=full` 只表示必须优化，不代表要求完整原生框架。恢复已有完整模式沿用原状态。lingxi 的正 engine_score 可低于 1，初始化、预约和反馈后的校验统一用 adapter 的显式 PyTorch 口径；原生校验结果单列，不能补 1 或改成相对 G。见[轻量交接](references/continuation.md#轻量优化交接)。
+   新优化任务默认使用随技能安装的适配脚本和轻量路径：复用 `prepare optimization` 中 `baseline_acceptance` 指向的有效验收，只准备本轮候选；不为阶段切换重复构建/测量 G，也不预先铺开完整策略树、另一套 session/state/ledger 或 HTML。正式合同、G 身份、轮次与预算由父任务持续维护；用户选择的 `stage_scope=full` 只表示必须优化，不代表要求完整原生框架。恢复已有完整模式沿用原状态。lingxi 的正 engine_score 可低于 1，初始化、预约和反馈后的校验统一用本技能 `scripts/cannbot/world_model_adapter.py` 的显式 PyTorch 口径；原生校验结果单列，不能补 1 或改成相对 G。见[轻量交接](references/continuation.md#轻量优化交接)。
 7. **进化搜索**：持续推进授权内轮次；C/V优化完整组合并共享预算。每轮结束先分析**每个候选**的慢例/退化项、证据、原因或可证伪假设，再归档 `round-review`；下一轮SELECT/派发前执行 `round-check`。没有足够证据可记unknown，但必须给出具体区分实验和预期观察。每个下一轮变体须关联本轮证据、明确机制改动和反证条件，不能只有参数组合。全部失败也形成有证据的分析终态。详见[评测与逐轮分析](references/performance-and-round-review.md)。下游相对PyTorch的score单列，正式G/O只按冻结性能集合；冠军替换仍需全量精度和同条件性能。
 8. **收尾**：达标直交的 G 或最终 O 都须保持可复现；核对最终源码/路由/库对应的全量验收证据；身份未变且证据仍有效时复用已有验收，修改后补验受影响项并完成全量验收。输出逐 case R/G/O、总体加速比和退化项、原始采样及复现命令。报告优化为 NOT_NEEDED / NOT_RUN / 已执行及其结果；无可靠改善保留 G。结果区分精度通过/性能有效/生成目标/优化目标，以及原世界树校验和报告状态；归档通过不等于所有门禁通过。HTML 为可选展示，失败时保留错误并交付 Markdown、JSON 和原始证据，不修改 CANNBot 或伪造报告成功。预算结束允许交付 TARGET_UNMET。框架集成另列下一阶段；未实测不宣称整网收益。
 
@@ -75,6 +75,7 @@ workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/�
 
 - [benchmark 接入](references/benchmark.md)：源码、shape、数据包和 loader 的衔接。
 - [执行模式与监工协议](references/execution-modes.md)：Codex/Claude 分工、派发确认、诊断纠偏、资源等待及接管。
+- [CANNBot 执行适配](references/cannbot-execution.md)：内置兼容脚本、外部 checkout、轻量/原生优化与适用的正式覆盖门禁；不依赖独立本地 adapter 包。
 - [归档与证据协议](references/protocol.md)：目录、交接内容、目标分母与证据归属。
 - [接线演练](references/rehearsal.md)：无 NPU 的独立前向测试与主协调者复核。
 - [任务输入模板](references/task-template.md)：开始任务与阶段汇报时按需使用，不重复询问已知字段。
