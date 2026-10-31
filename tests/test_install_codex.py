@@ -24,17 +24,21 @@ class InstallCodexTests(unittest.TestCase):
         self.repo = self.root / "CANNBot"
         self.task = self.root / "task"
         self.task.mkdir()
-        self.gen = self.repo / "plugins-community" / installer.GEN
+        self.gen = self.repo / "plugins-official" / installer.GEN
         self.evo = self.repo / "plugins-community" / installer.EVO
         for plugin in (self.gen, self.evo):
             self.write(plugin / "init.sh", "#!/bin/sh\n")
             (plugin / "agents").mkdir()
-        self.write(self.gen / "AGENTS.md", "---\nskills:\n  - common\n  - gen-only\n---\n")
+        self.write(self.gen / "AGENTS.md", "---\nskills:\n  - common\n  - gen-only\n  # infra dependencies\n  - infra-only\n---\n")
         self.write(self.evo / "AGENTS.md", "---\nskills:\n  - common\n  - evo-only\n---\n")
         for name in ("common", "gen-only", "op-case-generator"):
             self.write(self.repo / "ops" / name / "SKILL.md", name)
         self.write(self.evo / "skills/evo-only/SKILL.md", "evo")
-        for name, plugin in (("tilelang2ascendc-kernel-generator", self.gen),
+        self.write(self.repo / "infra/infra-only/SKILL.md", "infra")
+        for name in installer.GEN_AGENTS:
+            self.write(self.gen / "agents" / f"{name}.md", f"---\nname: {name}\nskills:\n  - agent-only\n---\n")
+        self.write(self.repo / "ops/agent-only/SKILL.md", "agent dependency")
+        for name, plugin in (
                              ("lingxi-evo", self.evo), ("lingxi-partial", self.evo),
                              ("ops-evo", self.evo), ("ops-partial", self.evo)):
             self.write(plugin / "agents" / f"{name}.md", f"---\nname: {name}\nskills: []\n---\n")
@@ -71,6 +75,31 @@ class InstallCodexTests(unittest.TestCase):
         self.assertIn("full CANNBot source", routing)
         self.assertIn("full correctness", routing)
         self.assertEqual(json.loads((self.task / installer.MANIFEST).read_text(encoding="utf-8")), manifest)
+
+    def test_direct_roles_and_declared_dependencies_without_tilelang(self):
+        before = {p: p.read_bytes() for p in self.repo.rglob("*") if p.is_file()}
+        entries, manifest = self.build()
+        self.assertTrue(installer.GEN_AGENTS <= set(manifest["vendor_agents"]))
+        self.assertIn(".agents/skills/agent-only", entries)
+        self.assertIn(".agents/skills/infra-only", entries)
+        self.assertFalse(any("tilelang" in name.lower() for name in entries))
+        self.assertNotIn(".agents/skills/ops-direct-invoke", entries)
+        route = entries["AGENTS.md"]["data"].decode()
+        self.assertIn("plugins-official", route)
+        self.assertIn("workflows/task-prompts.md", route)
+        for policy in ("Default auto scope", "frozen 10 performance cases", "at most 3 ultra-large",
+                       "deliver G when the target is met", "enter optimization only when it is unmet",
+                       "Do not preselect kernel count", "Every optimization round needs causal analysis"):
+            self.assertIn(policy, route)
+        for name in installer.GEN_AGENTS:
+            self.assertIn(name, route)
+        installer.install(self.task, entries)
+        self.assertEqual(before, {p: p.read_bytes() for p in self.repo.rglob("*") if p.is_file()})
+
+    def test_missing_direct_design_reviewer_fails(self):
+        (self.gen / "agents/ascendc-kernel-design-reviewer.md").unlink()
+        with self.assertRaisesRegex(installer.InstallError, "Missing required generation"):
+            self.build()
 
     def test_missing_dependency_and_collision_fail(self):
         (self.repo / "ops/gen-only/SKILL.md").unlink()

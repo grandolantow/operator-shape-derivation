@@ -12,13 +12,16 @@
 
 ```text
 源码/配置/profiling → shape → workload/definition/reference/输入
-→ benchmark验证与合同 → 实现选型及生成 → 全量验收并固定G
-→ 实际进化优化 → 最终复核、源码/数据/复现说明交付
+→ benchmark验证与合同 → 路线核查、成本表与独立设计评审
+→ 直接生成首版/复用 → 首次全量正确立即冻结G → 实测性能验收
+→ 达标：复核交付G；性能未达标：根因驱动进化 → 最终交付
 ```
 
-第0～4阶段由Codex完成，包括实现选型与生成；第5～7阶段可由Codex独立或Codex＋Claude协作完成；第8阶段由Codex复核交付。完整任务在合格G冻结后连续进入真实进化，不在HANDOFF文件处结束。
+第0～4阶段由Codex完成，包括实现选型与生成；第5～7阶段可由Codex独立或Codex＋Claude协作完成；第8阶段由Codex复核交付。新任务默认 auto：首版全量正确且固定性能目标达标即交付，未达标才进入真实进化。显式 full 保留强制进化范围；历史run不迁移。首版不预设C/V拆分、kernel数量或中间GM布局。
 
-默认生成目标R/G≥1.2；优化目标固定G/O≥1.5，最多5轮×5候选。G正确且正式计时有效时，生成性能未达标仍可进入进化。用户明确仅生成、仅shape或暂停时服从该范围。安装本仓不会自动启动Claude、NPU任务或定时看护。
+生成直接使用原生 AscendC，默认目标R/G≥1.2；优化目标固定G/O≥1.5，最多5小时有效执行、5轮×5候选。性能预先固定10例、超大不超过3例，正确性保持全量；每轮结束完成慢例及下一步假设分析再继续。G正确且正式计时有效时，生成性能未达标仍可进入进化。用户明确仅生成、仅shape或暂停时服从该范围。安装本仓不会自动启动Claude、NPU任务或定时看护。
+
+实现前执行[生成设计评审](skills/ascend-op-workflow/references/generation-design-review.md)：核对获准组件的支持域、精度与适配成本，列出规约、标量UB访问、同步、DMA粒度等成本，分别评审正确性与性能可行性。`design_check.py`检查当前文件身份及风险回应记录；静态通过不代表实测达标，也不修改外部生成器。
 
 ## 快速使用
 
@@ -45,7 +48,7 @@ bash ./install-claude.sh --cannbot-root /workspace/cannbot-skills --task-dir /wo
 ```bash
 python -m unittest discover -s tests -v
 python -m unittest discover -s skills/operator-shape-derivation/tests -v
-python -m unittest discover -s skills/ascend-op-workflow/scripts -p test_workflow.py -v
+python -m unittest discover -s skills/ascend-op-workflow/scripts -p 'test_*.py' -v
 ```
 
 测试结果与执行边界见 [VALIDATION.md](VALIDATION.md)。本仓目录名称不参与默认路径推导；可放在任意路径。远端改名状态见迁移说明，不假定尚未完成的改名已生效。

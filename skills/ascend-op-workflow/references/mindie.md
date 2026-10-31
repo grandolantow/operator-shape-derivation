@@ -21,7 +21,7 @@ python /path/to/workflow/install_codex.py --task-dir /path/to/task --apply
 ## 从准备到真实执行
 
 1. **输入与 workload**：按主 Skill 推导 shape，准备 definition/reference/inputs/workload，使用实际 benchmark schema/loader 检查。冻结完整 case、oracle、R、计时协议、写范围和预算。通过原 `workflow.py init/prepare generation` 记录父任务与 preparation。
-2. **Codex 生成**：读取 CANNBot 的 `plugins-community/tilelang2ascendc-ops-generator/AGENTS.md` 及其 `agents/tilelang2ascendc-kernel-generator.md`，按任务路线读取需要的技能。Codex 用实际可用的读写、编译、测试工具实施 Phase 0–7；角色名是参考，不调用不存在的 `Agent(...)`/`Task(...)`。只在当前项目规则允许且需要时派发原生子 agent，候选工作目录独立。原文中的 Claude 注册/Hook 语法不作为 Codex 前置条件；对应设计、全量精度、性能等门禁由当前执行者按原业务条件完成。
+2. **Codex 生成**：读取 CANNBot 的 `plugins-official/ops-direct-invoke/AGENTS.md`、四个 `agents/ascendc-kernel-*.md` 及 `workflows/task-prompts.md`。按原始模板实施环境、设计、设计审核、开发、代码审核、修复、全量验证和报告步骤；使用原生子 agent 承接角色，记录角色复用和审核独立性。所有新实现直接生成 AscendC，不进入 TileLang 设计/转译。Claude 专属语法由实际 Codex 工具承接；模板和 SDK 来源保持只读，不能以读取入口替代实际分阶段执行。
 3. **冻结 G**：真实生成和完整验证完成后，用 `freeze/result generation` 归档 G 与原始证据。G 全量正确且正式性能有效即可交接；生成目标未达记录 TARGET_UNMET，不伪造通过，也不阻止已授权优化。已有匹配 AscendC 时按原复用合同跳过生成。
 4. **Codex 优化**：用固定 G 创建 `prepare optimization`；读取 CANNBot 的 `plugins-community/ops-perf-evolution/AGENTS.md`，按工程选择 `agents/lingxi-evo.md` 或 `agents/ops-evo.md` 及相应 partial 参考。直接使用该版本的世界模型/状态脚本，推进 GATE → SELECT → GENERATE → REFINE → REACT → CHECKPOINT；策略选择、候选执行、评测回树均须真实发生。Claude 专属工具语法由 Codex 的实际工具承接，不启动 Claude 以满足角色名，也不另写一套搜索状态机。
 5. **回收**：按合同完整复测最终 O，使用原评测器生成同条件 G/O 证据，`freeze/result optimization/verify` 收尾。原内部 score 的分母若是 PyTorch，保留其含义；正式优化目标仍是固定 G/O。精度、有效性能、目标达成分别报告，预算结束可交付 TARGET_UNMET。

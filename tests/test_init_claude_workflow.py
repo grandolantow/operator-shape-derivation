@@ -30,19 +30,23 @@ class BootstrapTests(unittest.TestCase):
         patcher = mock.patch.object(bootstrap, "PACKAGE", self.package)
         patcher.start()
         self.addCleanup(patcher.stop)
-        self.gen = self.repo / "plugins-community" / bootstrap.GEN
+        self.gen = self.repo / "plugins-official" / bootstrap.GEN
         self.evo = self.repo / "plugins-community" / bootstrap.EVO
         for plugin in (self.gen, self.evo):
             self.write(plugin / "init.sh", "#!/bin/sh\n")
             (plugin / "agents").mkdir()
             (plugin / "hooks").mkdir()
-        self.write(self.gen / "AGENTS.md", "---\nskills:\n  - common\n  - gen-only\n---\n")
+        self.write(self.gen / "AGENTS.md", "---\nskills:\n  - common\n  - gen-only\n  # infra dependencies\n  - infra-only\n---\n")
         self.write(self.evo / "AGENTS.md", "---\nskills:\n  - common\n  - evo-only\n---\n")
         for name in ("common", "gen-only"):
             self.write(self.repo / "ops" / name / "SKILL.md", name)
         self.write(self.repo / "ops/op-case-generator/SKILL.md", "cases")
         self.write(self.evo / "skills/evo-only/SKILL.md", "evo")
-        for name, plugin in (("tilelang2ascendc-kernel-generator", self.gen),
+        self.write(self.repo / "infra/infra-only/SKILL.md", "infra")
+        for name in bootstrap.GEN_AGENTS:
+            self.write(self.gen / "agents" / f"{name}.md", f"---\nname: {name}\nskills:\n  - agent-only\n---\n")
+        self.write(self.repo / "ops/agent-only/SKILL.md", "agent dependency")
+        for name, plugin in (
                              ("lingxi-evo", self.evo), ("lingxi-partial", self.evo),
                              ("ops-evo", self.evo), ("ops-partial", self.evo)):
             self.write(plugin / "agents" / f"{name}.md", f"---\nname: {name}\nskills: []\n---\n")
@@ -77,6 +81,38 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn("'", settings["hooks"]["Stop"][0]["hooks"][0]["command"])
         self.write(self.task / ".claude/runtime/generation/hooks/__pycache__/run.pyc", "cache")
         self.assertTrue(bootstrap.check_existing(self.task, entries, manifest))
+
+    def test_direct_roles_dependencies_and_read_only_context(self):
+        before = {p: p.read_bytes() for p in self.repo.rglob("*") if p.is_file()}
+        entries, manifest = self.build()
+        for name in bootstrap.GEN_AGENTS:
+            self.assertIn(f".claude/agents/{name}.md", entries)
+        self.assertIn(".claude/skills/agent-only", entries)
+        self.assertIn(".claude/skills/infra-only", entries)
+        self.assertNotIn(".claude/skills/ops-direct-invoke", entries)
+        route = entries["CLAUDE.md"]["data"].decode()
+        for policy in ("Default auto scope", "frozen 10 performance cases", "at most 3 ultra-large",
+                       "deliver G when the target is met", "enter optimization only when it is unmet",
+                       "Do not preselect kernel count", "Every optimization round needs causal analysis"):
+            self.assertIn(policy, route)
+        self.assertFalse(any("tilelang" in name.lower() for name in entries))
+        self.assertEqual(Path(entries[".claude/workflows"]["source"]), self.gen / "workflows")
+        settings = json.loads(entries[".claude/settings.json"]["data"])
+        command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+        self.assertIn("session_context.py", command)
+        self.assertNotIn("run-hook.cmd", command)
+        context = entries[".claude/runtime/generation/session_context.py"]["data"].decode()
+        namespace = {"__builtins__": __builtins__}
+        with mock.patch("builtins.print") as output:
+            exec(compile(context, "session_context.py", "exec"), namespace)
+        payload = json.loads(output.call_args.args[0])
+        self.assertIn(str(self.gen / "workflows"), payload["hookSpecificOutput"]["additionalContext"])
+        self.assertEqual(before, {p: p.read_bytes() for p in self.repo.rglob("*") if p.is_file()})
+
+    def test_missing_direct_developer_fails(self):
+        (self.gen / "agents/ascendc-kernel-developer.md").unlink()
+        with self.assertRaisesRegex(bootstrap.BootstrapError, "Missing required agents"):
+            self.build()
 
     def test_missing_dependency_and_cross_plugin_collision_fail(self):
         (self.repo / "ops/gen-only/SKILL.md").unlink()
@@ -117,17 +153,6 @@ class BootstrapTests(unittest.TestCase):
         self.write(source / "references\\contract.md", "misplaced")
         with self.assertRaisesRegex(bootstrap.BootstrapError, "literal Windows separators"):
             bootstrap.plan(self.repo, self.task, source)
-
-    @unittest.skipIf(os.name == "nt", "Windows host lacks symlink privilege; apply runs in Linux container")
-    def test_attention_overlay_hash_matches_installed_copy(self):
-        self.write(self.gen / "AGENTS.md", "---\nskills:\n  - common\n  - tilelang2ascend-tilelang-designer\n---\n")
-        self.write(self.gen / "skills/tilelang2ascend-tilelang-designer/SKILL.md", "designer")
-        self.write(self.gen / "skills/tilelang2ascend-translator/references/attention-patterns/a.md", "attention")
-        entries, manifest = self.build()
-        rel = ".claude/skills/tilelang2ascend-tilelang-designer"
-        self.assertEqual(entries[rel]["kind"], "copytree")
-        bootstrap.apply(self.task, entries)
-        self.assertTrue(bootstrap.check_existing(self.task, entries, manifest))
 
     @unittest.skipIf(os.name == "nt", "Windows host lacks symlink privilege")
     def test_source_tree_internal_links_are_hashed_without_following_and_escape_fails(self):

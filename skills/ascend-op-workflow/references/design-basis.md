@@ -11,6 +11,12 @@
 
 本 skill 要求运行时解析真实 `ops-perf-evolution` 入口，不能因生成阶段 cwd 相同而把优化入口指向生成器目录。两个原始 init 的依赖及 hook 结构由集中初始化检查；兼容性以本次记录的来源哈希和验证结果为准。
 
+## 2026-10-30：直接 AscendC 与受控生成对比
+
+- 用户要求性能集固定10例、超大不超过3例，正确性仍全量；优化保留5小时有效执行、5轮每轮5变体，每轮结束先分析慢例/根因或可证伪假设，禁止单纯排列组合。
+- 生成改用 `plugins-official/ops-direct-invoke` 的原始四角色及阶段模板，弃用 TileLang；安装依赖、合同和证据协议同步。CANNBot保持只读。
+- 首次生成比较限定为 generation_only，两路全新隔离上下文、相同角色模型和原生生成器；每路2小时包含修复，首次全量正确立即冻结，再共同测性能。CLI新增可选冻结字段兼容历史run，不改写既有结果。
+
 ## 2026-10-08：C/V 串行分支
 
 - 项目指定目标为 `gpt-6.1-sol` / medium；工作流继续服从实际任务的模型与并发配置，不强制修改调用者模型。Claude 入口未指定模型，未代选或声称完成某一 Claude 模型的实测。
@@ -31,3 +37,7 @@
 - 使用当前项目首选 gpt-6.1-sol / medium 作为规范目标；本次模型不由skill硬编码。重新读取本机 skill-creator 及 [OpenAI Skills](https://developers.openai.com/plugins/concepts/skills)、[GPT-6模型指导](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6.1-sol)、[Claude Code skills](https://code.claude.com/docs/en/skills)。家族提示建议说明来自Astra行为，不能称为Sol专属实测；Claude框架不绑定实际API提供商。
 - 依据实际GELU生成/进化、GMMSituQuant串行生成与监工纠偏，补充连续推进参考：完整任务必须从合格G实际进入进化；目标未达、故障、预算结束与用户暂停分开处理。新增scope为任务记录约定，没有新增CLI参数或后台调度服务。
 - 提炼runner预检、独立golden/输入指纹、空case和正式计时规则；具体代理、设备、HBM阈值、CLI等待变量留在任务或环境记录，不固化为通用默认。此次修改不执行远端生成/搜索，不将历史实证计为新版本运行结果。
+
+## 2026-10-30 默认按需进化修订
+
+用户要求默认直接生成首版、先轻量验收、性能未达标再优化，保留固定10例/超大≤3/全量正确性/逐轮根因分析，并避免预先固定实现结构。本条覆盖前文历史记录中“完整任务必须实际进入进化”的默认要求；旧run及显式full范围不变。

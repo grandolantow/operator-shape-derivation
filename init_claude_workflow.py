@@ -19,7 +19,9 @@ import sys
 from pathlib import Path
 
 
-GEN = "tilelang2ascendc-ops-generator"
+GEN = "ops-direct-invoke"
+GEN_AGENTS = {"ascendc-kernel-architect", "ascendc-kernel-design-reviewer",
+              "ascendc-kernel-developer", "ascendc-kernel-reviewer"}
 EVO = "ops-perf-evolution"
 MANIFEST = ".claude/workflow-bootstrap-manifest.json"
 PACKAGE = Path(__file__).resolve().parent
@@ -71,17 +73,6 @@ def tree_records(root: Path) -> list[tuple[str, bytes]]:
     return records
 
 
-def hash_overlay_tree(base: Path, overlay: Path) -> str:
-    files = dict(tree_records(base))
-    files.update({f"references/attention-patterns/{relative}": record
-                  for relative, record in tree_records(overlay)})
-    h = hashlib.sha256()
-    for relative, record in sorted(files.items()):
-        h.update(relative.encode())
-        h.update(record)
-    return h.hexdigest()
-
-
 def frontmatter_skills(path: Path, required: bool = True) -> list[str]:
     if not path.is_file():
         raise BootstrapError(f"Missing frontmatter: {path}")
@@ -103,6 +94,8 @@ def frontmatter_skills(path: Path, required: bool = True) -> list[str]:
         raise BootstrapError(f"Missing skills whitelist: {path}")
     names: list[str] = []
     for line in header[index + 1 :]:
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
         match = re.fullmatch(r"\s+-\s+([a-zA-Z0-9_-]+)\s*", line)
         if not match:
             break
@@ -114,7 +107,7 @@ def frontmatter_skills(path: Path, required: bool = True) -> list[str]:
 
 def source_skill(plugin: Path, shared: Path, name: str, local_first: bool) -> Path:
     roots = (plugin / "skills", shared) if local_first else (shared, plugin / "skills")
-    for root in roots:
+    for root in (*roots, shared.parent / "infra"):
         path = root / name
         if (path / "SKILL.md").is_file():
             return path.resolve()
@@ -149,7 +142,7 @@ def choose_skills(gen: Path, evo: Path, shared: Path) -> tuple[dict[str, Path], 
     origins: dict[str, list[str]] = {}
     for plugin, local_first, exclude_triton in ((gen, False, True), (evo, True, False)):
         agents = sorted((plugin / "agents").glob("*.md"))
-        agent_pattern = "tilelang2ascendc-kernel-generator*" if plugin == gen else "*-*"
+        agent_pattern = "ascendc-kernel-*" if plugin == gen else "*-*"
         names = list(frontmatter_skills(plugin / "AGENTS.md"))
         for agent in agents:
             if fnmatch.fnmatch(agent.stem, agent_pattern):
@@ -169,14 +162,14 @@ def choose_skills(gen: Path, evo: Path, shared: Path) -> tuple[dict[str, Path], 
 
 def agents_for(gen: Path, evo: Path) -> dict[str, Path]:
     selected: dict[str, Path] = {}
-    for plugin, pattern in ((gen, "tilelang2ascendc-kernel-generator*"), (evo, "*-*")):
+    for plugin, pattern in ((gen, "ascendc-kernel-*"), (evo, "*-*")):
         for path in sorted((plugin / "agents").glob("*.md")):
             if not fnmatch.fnmatch(path.stem, pattern):
                 continue
             if path.stem in selected and hash_file(selected[path.stem]) != hash_file(path):
                 raise BootstrapError(f"Cross-plugin agent collision: {path.stem}")
             selected[path.stem] = path.resolve()
-    expected = {"tilelang2ascendc-kernel-generator", "lingxi-evo", "lingxi-partial", "ops-evo", "ops-partial"}
+    expected = GEN_AGENTS | {"lingxi-evo", "lingxi-partial", "ops-evo", "ops-partial"}
     missing = expected - set(selected)
     if missing:
         raise BootstrapError(f"Missing required agents: {', '.join(sorted(missing))}")
@@ -209,7 +202,14 @@ def merged_hooks(gen: Path, evo: Path, task: Path) -> bytes:
                         source_hook = evo / "hooks" / match.group(1) if match else None
                     if not source_hook or not source_hook.is_file():
                         raise BootstrapError(f"Missing referenced hook target: {source_hook}")
-                    hook["command"] = prefix + shlex.join(tokens)
+                    if plugin == gen:
+                        # The vendor SessionStart may clone/clean asc-devkit. Inject
+                        # the contract without running source installation logic.
+                        hook["command"] = shlex.join([
+                            "python3", str(runtime_gen / "session_context.py")
+                        ])
+                    else:
+                        hook["command"] = prefix + shlex.join(tokens)
                 output["hooks"].setdefault(event, []).append(copied)
     return json_bytes(output)
 
@@ -225,7 +225,7 @@ def plan(repo: Path, task: Path, workflow_skill: Path) -> tuple[dict, dict]:
         raise BootstrapError(f"Missing workflow SKILL.md: {skill_dir}")
     if any("\\" in item.relative_to(skill_dir).as_posix() for item in skill_dir.rglob("*")):
         raise BootstrapError("Workflow upload contains literal Windows separators; normalize the staged paths first")
-    gen = repo / "plugins-community" / GEN
+    gen = repo / "plugins-official" / GEN
     evo = repo / "plugins-community" / EVO
     shared = repo / "ops"
     for required in (gen / "init.sh", evo / "init.sh", shared):
@@ -257,7 +257,21 @@ def plan(repo: Path, task: Path, workflow_skill: Path) -> tuple[dict, dict]:
         add_entry(entries, rel, kind, source)
     for name, source in sorted(agents.items()):
         add_entry(entries, f".claude/agents/{name}.md", "link", source)
-    # The generation hooks write state relative to __file__, so copy this tree.
+    generation_context = (
+        "Generation uses the AscendC direct-invoke pipeline. Source is read-only. "
+        f"Read `{gen / 'AGENTS.md'}` and the four ascendc-kernel agent declarations. "
+        f"Resolve workflows/ against `{gen / 'workflows'}`, including task-prompts.md, "
+        "scripts and templates. Run scripts with the task as working directory. "
+        f"Available devkit source: `{gen / 'asc-devkit'}` (check existence; do not install automatically).\n\n"
+        + (gen / "AGENTS.md").read_text(encoding="utf-8")
+    )
+    context_payload = {"hookSpecificOutput": {
+        "hookEventName": "SessionStart", "additionalContext": generation_context
+    }}
+    context_script = "import json\nprint(json.dumps(" + repr(context_payload) + ", ensure_ascii=False))\n"
+    add_entry(entries, ".claude/runtime/generation/session_context.py", "file",
+              data=context_script.encode("utf-8"))
+    # Keep source hooks available for inspection; SessionStart uses the read-only shim.
     add_entry(entries, ".claude/runtime/generation/hooks", "copytree", gen / "hooks")
     add_entry(entries, ".claude/hooks/evolution", "copytree", evo / "hooks")
     add_entry(entries, ".claude/settings.json", "file", data=merged_hooks(gen, evo, task))
@@ -265,22 +279,28 @@ def plan(repo: Path, task: Path, workflow_skill: Path) -> tuple[dict, dict]:
     devkit = gen / "asc-devkit"
     if devkit.is_dir():
         add_entry(entries, ".claude/asc-devkit", "link", devkit)
-    # The vendor init mutates this source skill. Keep vendor untouched.
-    translator_patterns = gen / "skills/tilelang2ascend-translator/references/attention-patterns"
-    designer_patterns = gen / "skills/tilelang2ascend-tilelang-designer/references/attention-patterns"
-    if translator_patterns.is_dir() and not designer_patterns.is_dir():
-        designer = gen / "skills/tilelang2ascend-tilelang-designer"
-        dest = ".claude/skills/tilelang2ascend-tilelang-designer"
-        entries.pop(dest, None)
-        add_entry(entries, dest, "copytree", designer)
-        entries[dest]["overlay_attention"] = str(translator_patterns)
-        entries[dest]["overlay_sha256"] = hash_tree(translator_patterns)
-        entries[dest]["sha256"] = hash_overlay_tree(designer, translator_patterns)
+    # Keep direct runtime resources discoverable without modifying the source.
+    add_entry(entries, ".claude/runtime/generation/AGENTS.md", "link", gen / "AGENTS.md")
+    add_entry(entries, ".claude/runtime/generation/workflows", "link", gen / "workflows")
+    if devkit.is_dir():
+        add_entry(entries, ".claude/runtime/generation/asc-devkit", "link", devkit)
     claude = (
         "# Ascend operator workflow\n\n"
         "Use the task-local `.claude/skills/ascend-op-workflow/SKILL.md` as the coordinating workflow. "
         "Standard stages 0-4 belong to Codex, including selection and generation; Claude may execute stages 5-7 when assigned. Read the generation plugin's AGENTS.md only when that stage is explicitly assigned and the evolution plugin's "
-        "AGENTS.md when entering optimization. Preserve their own agent names and stage boundaries. "
+        "AGENTS.md when entering optimization. Generation uses the AscendC direct-invoke Step 1-7 "
+        "pipeline with ascendc-kernel-architect, ascendc-kernel-design-reviewer, "
+        "ascendc-kernel-developer and ascendc-kernel-reviewer. Read the source "
+        "workflows/task-prompts.md templates before each role invocation. Resolve source scripts "
+        "and templates by absolute path, run scripts with the task as working directory, and "
+        "keep source scripts/templates unchanged. Preserve each plugin stage boundary. "
+        "Default auto scope generates the first implementation directly, then runs lightweight acceptance: "
+        "full correctness and the frozen 10 performance cases, at most 3 ultra-large. "
+        "Record measured R/G evidence and run workflow.py decision: deliver G when the target is met; "
+        "enter optimization only when it is unmet, unless explicitly assigned full scope. "
+        "Missing or conflicting measurements require acceptance work. Do not preselect kernel count, "
+        "C/V splitting or intermediate GM layout. Every optimization round needs causal analysis "
+        "and evidence-backed next hypotheses before further dispatch. "
         "If the task assigns Codex as supervisor, read `references/execution-modes.md` within the "
         "workflow skill, acknowledge the current dispatch, and execute within its contract and "
         "remaining budget. Maintain execution facts separately from supervisor acceptance; "
@@ -368,9 +388,6 @@ def apply(task: Path, entries: dict) -> None:
             path.symlink_to(item["source"], target_is_directory=Path(item["source"]).is_dir())
         elif item["kind"] == "copytree":
             shutil.copytree(item["source"], path, symlinks=True)
-            overlay = item.get("overlay_attention")
-            if overlay:
-                shutil.copytree(overlay, path / "references/attention-patterns", symlinks=True)
         else:
             path.write_bytes(item["data"])
     manifest = task / MANIFEST
