@@ -23,6 +23,8 @@
 
 实现前执行[生成设计评审](skills/ascend-op-workflow/references/generation-design-review.md)：核对获准组件的支持域、精度与适配成本，列出规约、标量UB访问、同步、DMA粒度等成本，分别评审正确性与性能可行性。`design_check.py`检查当前文件身份及风险回应记录；静态通过不代表实测达标，也不修改外部生成器。
 
+Codex/MindIE 执行所需的[适配脚本和说明](skills/ascend-op-workflow/references/cannbot-execution.md)随 workflow 技能安装，显式连接外部 CANNBot checkout，无需原开发机的独立 adapter 包。新优化任务默认轻量执行，复用有效 G 验收；正 PyTorch 分数低于 1 的兼容、候选预约及适用的全量门禁由本仓维护。MindIE 仍使用原生远端作业与资源工具。
+
 ## 快速使用
 
 先准备本仓，再创建独立任务目录。默认安装不依赖 CANNBot；实际生成/优化需要时再询问安装或复用已有 checkout。Windows示例：
@@ -50,5 +52,7 @@ python -m unittest discover -s tests -v
 python -m unittest discover -s skills/operator-shape-derivation/tests -v
 python -m unittest discover -s skills/ascend-op-workflow/scripts -p 'test_*.py' -v
 ```
+
+适配器的 29 项外部集成测试默认在未指定 CANNBot 时跳过。运行根测试前设置 `CANNBOT_SOURCE_ROOT` 为完整只读 checkout（Bash：`export CANNBOT_SOURCE_ROOT=/path/to/cannbot-skills`；PowerShell：`$env:CANNBOT_SOURCE_ROOT='C:\work\cannbot-skills'`），即可启用真实原生校验、select/refine 和门禁控制逻辑检查；测试中的候选结果为 fixture，不调用 NPU。
 
 测试结果与执行边界见 [VALIDATION.md](VALIDATION.md)。本仓目录名称不参与默认路径推导；可放在任意路径。远端改名状态见迁移说明，不假定尚未完成的改名已生效。

@@ -42,7 +42,7 @@
 
 只提出本轮搜索宽度内的候选与假设，不预先扩充多轮策略树。已有父合同、状态及累计预算时，不要求再建立原生 session/state/ledger 来表达同一事实；世界模型仍保留最小身份、合法节点及先预约后派发的恢复映射。若选择原生 SELECT，遵守实际配额并拒绝虚拟 `free_N`；也可由协调者直接选择已持久化的合法节点，经相同预约检查后分发。
 
-读取当前 adapter 的轻量执行入口。lingxi 的同 run PyTorch/候选分数低于 1 是合法的慢实现；初始化、预约前后和 refine 后统一通过 adapter 的显式 pytorch 校验，保留原生校验原文。该兼容不证明性能或精度，不允许改分数、忽略其他结构错误或修改 CANNBot。正式固定 G/O 目标仍由父任务验收，不由内部 engine_score 代替。
+读取随本 workflow 安装的[执行适配](cannbot-execution.md)和[轻量执行](cannbot-lightweight.md)，不再查找本机独立 adapter 包。lingxi 的同 run PyTorch/候选分数低于 1 是合法的慢实现；初始化、预约前后和 refine 后统一通过本技能 `scripts/cannbot/world_model_adapter.py` 的显式 pytorch 校验，保留原生校验原文。该兼容不证明性能或精度，不允许改分数、忽略其他结构错误或修改 CANNBot。正式固定 G/O 目标仍由父任务验收，不由内部 engine_score 代替。
 
 完整 PMU、仿真、HTML、全库知识整理按具体需要执行；时间实测、逐例退化分析和全量精度仍是必需项。用户的一轮限制只运行一轮，不因框架准备或恢复增加轮次。`stage_scope=full` 与 adapter 的完整原生执行模式分别表示目标范围和执行方式；恢复已有完整模式不迁移、清零或重新初始化。
 
