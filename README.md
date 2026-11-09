@@ -45,6 +45,23 @@ bash ./install-claude.sh --cannbot-root /workspace/cannbot-skills --task-dir /wo
 
 仅做shape推导可继续使用旧的根目录SKILL.md安装方式，不要求CANNBot或NPU。生成与多轮优化消耗较多 token，建议常规代码模型和中等 effort，复杂问题再局部提升；CANNBot 保持独立且不修改。实际依赖和更新注意事项见安装说明。
 
+## 让 agent 更新到指定分支
+
+已安装旧版时，可以把下面这段提示词直接发给 agent；使用其他分支时替换分支名即可：
+
+```text
+请把当前项目实际使用的 ascend-op-workflow skill 更新到以下仓库分支：
+仓库：https://github.com/grandolantow/operator-shape-derivation.git
+分支：feat/vector-hot-card-selection
+
+1. 先确认实际加载的 skill 路径、源码仓库和安装方式（目录链接或复制安装），读取仓库安装说明；获取目标分支并固定本次更新的提交 SHA。
+2. 直接引用源码时，更新到目标提交；复制安装时，在原任务目录备份并更新本仓托管的 skill，同步安装清单，不只切换源码分支或修改清单哈希。当前 install_codex.py 没有 --update 参数，版本不同的 --apply 会拒绝覆盖，请按实际安装方式处理。
+3. 保留项目代码、合同、检查点、日志、自定义配置和外部 CANNBot；不要覆盖本地修改，遇到冲突先列出。不要在算子任务运行中途替换其 skill。
+4. 完成后核对实际加载内容与目标提交一致，报告变更文件、加载路径、提交 SHA 和验证结果，并说明是否需要新开会话。
+```
+
+仅在源码仓库切换分支不会更新复制安装的副本。更新后建议打开新会话，加载新版 skill；无需重新创建任务目录。安装器的冲突规则见[版本更新与冲突](docs/INSTALL.md#版本更新与冲突)。
+
 ## 验证
 
 ```bash
