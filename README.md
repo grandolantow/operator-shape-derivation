@@ -45,6 +45,21 @@ bash ./install-claude.sh --cannbot-root /workspace/cannbot-skills --task-dir /wo
 
 仅做shape推导可继续使用旧的根目录SKILL.md安装方式，不要求CANNBot或NPU。生成与多轮优化消耗较多 token，建议常规代码模型和中等 effort，复杂问题再局部提升；CANNBot 保持独立且不修改。实际依赖和更新注意事项见安装说明。
 
+## 让 agent 首次安装
+
+在准备使用 skill 的项目目录打开 agent，直接发送下面的提示词；使用其他分支时替换分支名即可：
+
+```text
+请为当前项目安装 ascend-op-workflow skill，使用以下仓库分支：
+仓库：https://github.com/grandolantow/operator-shape-derivation.git
+分支：feat/vector-hot-card-selection
+
+1. 确认当前项目目录，复用已有源码 checkout 或克隆到允许的源码目录，获取目标分支并记录提交 SHA；先读取 README 和 docs/INSTALL.md。
+2. 默认使用 Codex 安装入口：以当前项目目录为 --task-dir，先运行 install_codex.py 预览，确认范围后加 --apply 执行。安装完整 workflow/shape 技能，不只复制 SKILL.md。保留已有 AGENTS.md 和自定义配置，遇到冲突先列出；如果已经安装旧版，按 README 的更新方式处理。
+3. 默认只安装本仓技能；已有明确的 CANNBot checkout 时按说明复用，否则留到生成/优化时再配置。不要自动安装 CANN、torch-npu 或 Claude，也不要启动算子生成、编译和 NPU 测试。
+4. 完成后核对已安装内容与目标提交一致，报告安装路径、提交 SHA 和验证结果，并告诉我如何在新会话中使用 ascend-op-workflow。
+```
+
 ## 让 agent 更新到指定分支
 
 已安装旧版时，可以把下面这段提示词直接发给 agent；使用其他分支时替换分支名即可：
