@@ -165,6 +165,10 @@ def discover(repo: Path | None, workflow: Path) -> tuple[dict[str, Path], dict]:
         for agent in agents:
             names.extend(frontmatter_skills(agent, required=False))
         for name in dict.fromkeys(names):
+            # The umbrella declaration also includes repository collaboration tools.
+            # They are outside operator generation/evolution, even if listed by a role.
+            if name.startswith("gitcode-"):
+                continue
             if exclude_triton and "triton" in name.lower():
                 continue
             source = source_skill(plugin, shared, name, local_first)
@@ -225,6 +229,7 @@ def route_text(repo: Path | None) -> bytes:
         "`references/mindie.md`. Codex is the default executor; Claude is optional. Generation and "
         "optimization consume substantial tokens; recommend a regular coding model and medium effort. "
         "Keep the external CANNBot checkout unchanged. Use the workflow's stage and evidence rules. "
+        "GitCode collaboration skills are outside this workflow's installation scope. "
         "For generation, read the source generation AGENTS.md below; for optimization, first read "
         "references/cannbot-execution.md in the installed workflow and use its bundled "
         "scripts/cannbot helpers with explicit source paths and the selected execution profile. "

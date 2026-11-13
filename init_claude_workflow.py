@@ -148,6 +148,9 @@ def choose_skills(gen: Path, evo: Path, shared: Path) -> tuple[dict[str, Path], 
             if fnmatch.fnmatch(agent.stem, agent_pattern):
                 names.extend(frontmatter_skills(agent, required=False))
         for name in dict.fromkeys(names):
+            # Match the Codex installer: skip repository collaboration declarations.
+            if name.startswith("gitcode-"):
+                continue
             if exclude_triton and "triton" in name.lower():
                 continue
             source = source_skill(plugin, shared, name, local_first)
@@ -287,6 +290,7 @@ def plan(repo: Path, task: Path, workflow_skill: Path) -> tuple[dict, dict]:
     claude = (
         "# Ascend operator workflow\n\n"
         "Use the task-local `.claude/skills/ascend-op-workflow/SKILL.md` as the coordinating workflow. "
+        "GitCode collaboration skills are outside this workflow's installation scope. "
         "Standard stages 0-4 belong to Codex, including selection and generation; Claude may execute stages 5-7 when assigned. Read the generation plugin's AGENTS.md only when that stage is explicitly assigned and the evolution plugin's "
         "AGENTS.md when entering optimization. Generation uses the AscendC direct-invoke Step 1-7 "
         "pipeline with ascendc-kernel-architect, ascendc-kernel-design-reviewer, "
