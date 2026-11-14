@@ -1,7 +1,7 @@
 {
   "source": "ascendc-tiling-design knowledge snapshot experimental_REV5, captured 2026-11-05",
   "license": "CANN Open Software License Agreement 2.0",
-  "distribution_note": "The hashes below identify original source bytes, not delivered bytes. Markdown trailing whitespace and final blank lines are normalized; the operator entry is adapted to INDEX and its direct-AscendC workflow. Each PR package FILES.json records the actual delivered path, bytes and SHA256. CANNBot documents use reviewed three-way merges to retain upstream additions.",
+  "distribution_note": "The hashes below identify original source bytes, not delivered bytes. Markdown trailing whitespace and final blank lines are normalized; the operator entry is adapted to INDEX and its direct-AscendC workflow. Stale reduction navigation anchors are corrected to the included detailed algorithm pages or current headings; algorithm content is unchanged by those link fixes. Each PR package FILES.json records the actual delivered path, bytes and SHA256. CANNBot documents use reviewed three-way merges to retain upstream additions.",
   "historical_reading": "Availability and later packaging do not prove per-author reading before generation.",
   "files": [
     {

@@ -19,7 +19,7 @@
 - **epsilon 的位置**由归一化定义决定（如分母 `rsqrt(var + eps)`），属于算子语义，tiling 不得改变。
 - **累加 dtype**：通常 fp32；转换顺序为 输入 dtype → fp32 累加 → 统计量。
   fp32 中间是物理 buffer，必须入账（见第四节）。
-- 流式两个相关统计量（如 mean/var 单遍更新）可用 Welford，见 [algorithms.md](algorithms.md#2-welford-online-算法在线单遍)。
+- 流式两个相关统计量（如 mean/var 单遍更新）可用 Welford，见 [Welford 算法详解](alg-welford.md)。
 
 ---
 
