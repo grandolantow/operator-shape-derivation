@@ -42,3 +42,9 @@ python -m unittest discover -s skills/ascend-op-workflow/scripts -p 'test_*.py' 
 适配器的 29 项外部集成测试默认在未指定 CANNBot 时跳过。运行根测试前设置 `CANNBOT_SOURCE_ROOT` 为完整只读 checkout（Bash：`export CANNBOT_SOURCE_ROOT=/path/to/cannbot-skills`；PowerShell：`$env:CANNBOT_SOURCE_ROOT='C:\work\cannbot-skills'`），即可启用真实原生校验、select/refine 和门禁控制逻辑检查；测试中的候选结果为 fixture，不调用 NPU。
 
 测试结果与执行边界见 [VALIDATION.md](VALIDATION.md)。本仓目录名称不参与默认路径推导；可放在任意路径。远端改名状态见迁移说明，不假定尚未完成的改名已生效。
+
+## Shape 驱动 tiling
+
+新生成在原设计阶段完成 shape 分析，并按问题读取相关知识，接入现有实现、审查和验证。见[流程与示例](docs/SHAPE_TILING.md)、[知识入口](skills/ascend-op-workflow/references/tiling-knowledge/INDEX.md)。原直接 AscendC 路线、合同、默认性能集合及优化预算保持不变。
+
+四算子的 A/B/C1 实验结果、逐 shape 数据范围与原流程验收边界见[实验报告](docs/experiments/shape-tiling-abc-20261113.md)。已有设备测量与本次知识发行的离线检查分别记录，不以描述性倍率推断普遍或因果收益。

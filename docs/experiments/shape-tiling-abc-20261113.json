@@ -1,0 +1,239 @@
+{
+  "as_of": "2026-11-13",
+  "CPU_scope_review_as_of": "2026-11-14",
+  "scope": "Histc, Interpolate, Scatter, RMSNorm; A/B/C1",
+  "all_12_original_native_acceptances_pass": false,
+  "RMSNorm_C1_posthoc_semantic_review_complete": true,
+  "metric": {
+    "unit": "microseconds",
+    "per_case_ratio": "A.ASC_us / candidate.ASC_us",
+    "aggregation": "geometric mean of paired per-case ratios",
+    "total_time_ratio": "sum(A.ASC_us) / sum(candidate.ASC_us)",
+    "interpretation": "descriptive original-tool-field comparison, not pure-kernel, end-to-end, or causal knowledge-effect proof"
+  },
+  "operators": [
+    {
+      "name": "Histc",
+      "cases": 15,
+      "precision_covered_per_arm": {
+        "A": 15,
+        "B": 15,
+        "C1": 15
+      },
+      "performance_covered_per_arm": {
+        "A": 15,
+        "B": 15,
+        "C1": 15
+      },
+      "B": {
+        "gm": 1.423161,
+        "faster": 15,
+        "slower": 0,
+        "total_time_ratio": 1.435542
+      },
+      "C1": {
+        "gm": 1.172633,
+        "faster": 10,
+        "slower": 5,
+        "total_time_ratio": 1.246671
+      },
+      "state": "frozen_with_historical_evidence_limits",
+      "public_case_data": [
+        "shape-tiling-abc-data/histc_15_a_c1.csv",
+        "shape-tiling-abc-data/histc_15_a_b.csv"
+      ],
+      "missing_public_case_columns": [],
+      "limits": [
+        "public A/C1 values are rounded in the reviewed source",
+        "candidate identities in the report are abbreviated; full artifacts are not distributed",
+        "A/B source exports shape/dtype but not all original contract parameters; original input identity not established from public tables"
+      ]
+    },
+    {
+      "name": "Interpolate",
+      "cases": 72,
+      "precision_covered_per_arm": {
+        "A": 72,
+        "B": 72,
+        "C1": 72
+      },
+      "performance_covered_per_arm": {
+        "A": 72,
+        "B": 72,
+        "C1": 72
+      },
+      "B": {
+        "gm": 5.290499612214569,
+        "faster": 71,
+        "slower": 1,
+        "total_time_ratio": 6.827956926064135
+      },
+      "C1": {
+        "gm": 55.175792,
+        "faster": 72,
+        "slower": 0,
+        "total_time_ratio_rounded": 99.251
+      },
+      "state": "frozen_with_historical_evidence_limits",
+      "public_case_data": "shape-tiling-abc-data/interpolate_72.csv",
+      "missing_public_case_columns": [],
+      "limits": [
+        "B uses a newly captured full performance batch, not recovered old PROF or mixed timing",
+        "mode comes from the A index and does not independently prove B mode or identical input bytes",
+        "host preparation is not guaranteed to be fully included"
+      ]
+    },
+    {
+      "name": "Scatter",
+      "cases": 41,
+      "precision_covered_per_arm": {
+        "A": 41,
+        "B": 41,
+        "C1": 41
+      },
+      "performance_covered_per_arm": {
+        "A": 41,
+        "B": 41,
+        "C1": 41
+      },
+      "B": {
+        "gm": 2.949142,
+        "faster": 33,
+        "slower": 8,
+        "total_time_ratio": 13.734168
+      },
+      "C1": {
+        "gm": 5.889474,
+        "faster": 40,
+        "slower": 1,
+        "total_time_ratio": 10.719167
+      },
+      "state": "frozen_with_review_notes",
+      "public_case_data": "shape-tiling-abc-data/scatter_41.csv",
+      "missing_public_case_columns": [],
+      "limits": [
+        "A case20 uses original parser/log evidence, not a recovered performance.json",
+        "A review is PASS WITH NOTES; proven score lower bound is 77/100",
+        "B lineage predates the current A; do not retroactively label it a controlled derivation of current A"
+      ]
+    },
+    {
+      "name": "RMSNorm",
+      "cases": 156,
+      "precision_covered_per_arm": {
+        "A": 156,
+        "B": 156,
+        "C1": 156
+      },
+      "performance_covered_per_arm": {
+        "A": 156,
+        "B": 156,
+        "C1": 156
+      },
+      "B": {
+        "gm": 0.9884852583154623,
+        "faster": 69,
+        "slower": 87,
+        "total_time_ratio": 0.9968276077376593
+      },
+      "C1": {
+        "gm": 0.8795661499219289,
+        "faster": 30,
+        "slower": 126,
+        "total_time_ratio": 1.1595525812062877
+      },
+      "state": "data_complete_posthoc_semantic_review_complete_original_receipts_preserved",
+      "public_case_data": [
+        "shape-tiling-abc-data/rmsnorm_156_a_c1.csv",
+        "shape-tiling-abc-data/rmsnorm_156_a_b.csv"
+      ],
+      "missing_public_case_columns": [],
+      "C1_original_parent_jobs": {
+        "count": 4,
+        "state": "failed",
+        "gate_evidence": "UNVERIFIED",
+        "posthoc_data_review_available": true
+      },
+      "C1_remaining": [],
+      "C1_semantic_review": {
+        "complete": true,
+        "scope": "posthoc independent review of this round against the existing original semantic checklist; after 4d closure no other unmet original semantic clause was identified",
+        "changes_original_native_states": false
+      },
+      "C1_future_rerun_prerequisites": [
+        "current guard environment receipt mismatch and unavailable original temporary task paths must be addressed before a new run; they do not invalidate independently reviewed historical numerical data"
+      ],
+      "C1_iteration_scope_decision": {
+        "as_of": "2026-11-14",
+        "author_stop_note_independently_reviewed": true,
+        "decision": "STOP: baseline met the original target; supported conditional analysis, candidate feasibility and implementation/regression costs justify ending this round",
+        "original_4d_posthoc_semantic_review_complete": true,
+        "basis": "original 4b permits skipping 4c when GM(ref/TL)>=0.6; actual standard GM is 3.559312429844659. Original 4d requires a supported engineering decision, not measured removal fractions for a new candidate or proof of a hardware limit.",
+        "conditional_examples_only": "Four representative short-row/streamed examples yield about 1.048-1.150x under hypothetical 10%-25% elimination of an assumed wall-time fraction. These are neither measured gains nor a proven achievable range; actual gain may be negative.",
+        "claims_physical_performance_limit": false,
+        "changes_original_native_states": false
+      },
+      "limits": [
+        "quick parser fallback and actual iteration boundaries are not established per case",
+        "some older B values were printed to two decimal places",
+        "TL standard performance is separate from ASC A/C1 comparison",
+        "raw parent-job states are preserved"
+      ],
+      "C1_CPU_existing_profile_review": {
+        "cases_with_existing_Pipe_Memory_Arithmetic": 156,
+        "kernel_route_case_counts": {
+          "direct": 6,
+          "resident": 122,
+          "streamed": 4,
+          "merged": 24
+        },
+        "independently_recomputed": true,
+        "upper_bound_acceptance_complete": true,
+        "upper_bound_acceptance_scope": "posthoc engineering analysis under original 4d, not proof of a physical upper limit or original native PASS",
+        "case42_CPU_evidence": [
+          "original PMU records, installed tool formulas and database values were cross-checked and independently reviewed",
+          "retained traces link 20 iterations to kernels and host launch, but do not expose internal load/compute/store stage boundaries",
+          "conditional Amdahl/roofline sensitivity estimates are usable engineering evidence, not proof of exact residual speedup"
+        ],
+        "original_4d_scope": "Reasonable stage/pipe estimates and explicit assumptions are allowed. Obtaining every counter unit, an exact official hardware peak or mutually exclusive stages is not a universal additional gate; any adopted numerical inference still needs adequate support.",
+        "limitations": [
+          "separate metric captures do not prove per-iteration alignment or additive algorithm-stage fractions",
+          "unknown counter byte granularity or memory level cannot be treated as physical HBM traffic; ideal logical traffic is not a proven HBM lower bound",
+          "conditional examples are neither measured candidate gains nor guaranteed improvement ranges; the STOP decision considers the achieved target, supported estimates and implementation/regression costs"
+        ]
+      }
+    }
+  ],
+  "data_manifest": "shape-tiling-abc-data/manifest.json",
+  "public_data_rows": 455,
+  "public_data_review": "shape-tiling-abc-review-20261113.md",
+  "pairing_identity_limit": "Merged rows and unique case IDs do not independently establish original joins or bitwise-identical inputs; repeated shape/dtype combinations exist. Case identity depends on retained original indexes, which are not fully redistributed.",
+  "review_digest_semantics": "SHA-256 identifies retained original review bytes, not publicly retrievable original artifacts or proof of full reproducibility",
+  "source_review_sha256": {
+    "scatter_pair": "2a62926fe11795c1683a7e96d5739354497825c0dd5a809f30fc6ead8de36f54",
+    "scatter_A_review": "c654f68dd546534f2e47bef34d6a0b241888b41b91a775b983b474922079a6ea",
+    "interpolate_B_archive": "d5077eae08b0dfc823b0acb96e3a57e6f5b10854f59772de0f53bc73784b0ca5",
+    "RMS_B_semantic": "80e38b47bcbeb732676b30f5206202005f8f5a685a4363eef03b4ca5f124c5a5",
+    "RMS_B_pair": "b4b010a0f3d7bfd10554b738ae6b47e0bca2f14a3080ebaf5d9ab78b7c8b9bf6",
+    "RMS_C1_TL": "ca45b3f64fbcb0cdc9076f70e996f3a0765e8005454186acd98d083f85771fe1",
+    "RMS_C1_ASC_posthoc": "0a0a645cf9f0b95ce1ac3e1c298a177751b51f46ece101397031205fc4ddc974",
+    "RMS_A_C1_pair": "3859235480d06dc255df29a2da234206bb30dc40e48feedec9664ddfc7ea050d",
+    "RMS_timing_method": "975adacdb5f8cde6c5a06e5f0911c605d1fb23c5a275c1be4ffd078fb66c703a",
+    "RMS_C1_remaining_reviewed_checklist": "a3da6bd96e593d5d8fcd3565da4467dcc1a8d436495a1823be4394e60f65637d",
+    "additional_Histc_RMS_AB_arithmetic": "5b2dab4e1a1277cf20416a32ba23a7116d75ccc0cf51857c7a611a236c8238c8",
+    "additional_AB_public_review_source": "ef261534ce63f79029a8c6e8301ae4d829d7cfab0d30d1895b64f5e5f2e637df",
+    "RMS_C1_CPU_profile_statistics": "aeb99bc45b1f6946138d9e9fdc790bfcf5b55288185fe1fe6ed294dbd7345260",
+    "RMS_C1_CPU_4d_observations_v2": "de4fd40ad3ad844e67f4666831ad77d03e41275795a76f8a71268e9be784b6ba",
+    "RMS_C1_case42_PMU_review": "c2907f745580598eb4ae930fbcb24f8e835a096b883374a03ef5214f6141ba68",
+    "RMS_C1_pipe_sensitivity": "48d7be4c8fd1dff50cc6f972f91f6e45f961fd9241cc0c7d7a0fbc792246a277",
+    "RMS_C1_delivery_and_4d_scope": "54aa9edd75fd932b12de5613aacb732a3db72d09f347b9046dc87881cd91524b",
+    "RMS_C1_iteration_stop_note": "353166096c41fd600f94230e7ed02353650899dbe7a987024548d163285c28d2",
+    "RMS_C1_baseline_pass_4d_final_report": "a907647baffbbe351fb5219b4e79f065d64906815a4b1c1736517b5ff38e0152",
+    "RMS_C1_baseline_pass_4d_independent_review": "c499e6a9b3c3e0cd30f49cd2cab542ddddacfd3e601acb08efeed61b757a0028",
+    "RMS_C1_semantic_review_scope": "bea094b866b9332487c7897f4dd673f7ba64da225f4f4f60c553d9cfb477d576"
+  },
+  "historical_knowledge_reading": "material availability and later packaging do not prove per-author reading before generation",
+  "device_work_this_document_update": "none",
+  "Cumsum": "paused by user; excluded from this four-operator report",
+  "public_data_row_semantics": "Sum of rows in six CSV files; Histc and RMSNorm A values repeat between A/B and A/C1 tables. Not 455 distinct test cases."
+}

@@ -11,3 +11,9 @@
 本仓不存凭据、代理认证、机器私有配置、模型权重或真实任务大日志。环境记录和算子产物归属任务目录。
 
 安装manifest分别记录工作流源码位置、外部CANNBot路径、实际skills/agents/hooks来源与哈希。同名技能内容冲突时报错，不静默覆盖。
+
+## Shape tiling 知识参考
+
+`skills/ascend-op-workflow/references/tiling-knowledge/` 是有界的文本知识参考，来源为 CANNBot 的 tiling 基础资料及本项目知识增强快照。保留 49 份 Markdown 的内容范围（入口适配为 INDEX），不分发快照的独立 eval fixture；另含读取路由及四份用户推理资料的五份蒸馏文档。来源逐文件身份及与基础版本的差异见 `docs/SHAPE_TILING_SOURCES.json`。沿用 CANN 2.0 许可证，原有声明保留，副本见 `LICENSES/CANN-2.0.txt`。这些参考不包含 CANNBot generation/evolution 插件、Hook、共享构建器或生产 kernel；外部 CANNBot 仍是运行时依赖。
+
+样例 shape、芯片容量与调度 key 仅在各自适用范围使用，不作通用阈值；SDK API 和硬件限制仍核当前官方资料。研究中的源码观察保留原 blob 身份，不表示本次重新审计上游。ABC 历史材料可见性与实际读取证明独立记录，不由本次知识发行包补造。
