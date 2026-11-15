@@ -109,6 +109,18 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn(str(self.gen / "workflows"), payload["hookSpecificOutput"]["additionalContext"])
         self.assertEqual(before, {p: p.read_bytes() for p in self.repo.rglob("*") if p.is_file()})
 
+    def test_gitcode_declarations_are_not_required_or_installed(self):
+        self.write(self.gen / "AGENTS.md", "---\nskills:\n  - common\n  - gen-only\n  - infra-only\n  - gitcode-toolkit\n  - gitcode-pr-handler\n---\n")
+        self.write(self.evo / "AGENTS.md", "---\nskills:\n  - evo-only\n  - gitcode-issue-handler\n---\n")
+        self.write(self.gen / "agents/ascendc-kernel-developer.md",
+                   "---\nskills:\n  - agent-only\n  - gitcode-issue-gen\n---\n")
+        self.write(self.repo / "infra/gitcode-toolkit/SKILL.md", "repository tools")
+        entries, manifest = self.build()
+        self.assertFalse(any("gitcode-" in name for name in entries))
+        self.assertFalse(any(name.startswith("gitcode-") for name in manifest["skill_origins"]))
+        for name in ("common", "gen-only", "evo-only", "agent-only", "infra-only", "op-case-generator"):
+            self.assertIn(f".claude/skills/{name}", entries)
+
     def test_missing_direct_developer_fails(self):
         (self.gen / "agents/ascendc-kernel-developer.md").unlink()
         with self.assertRaisesRegex(bootstrap.BootstrapError, "Missing required agents"):
