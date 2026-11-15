@@ -33,6 +33,8 @@ workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/�
 
 新生成或改变主要计算路线时，在实现前执行[生成设计评审](references/generation-design-review.md)：设计前核查获准组件的支持域与精度机制，设计中列实际操作粒度成本，独立走读分别判断正确性与性能可行性。主协调者读取设计及证据，运行 `scripts/design_check.py`；未闭合的风险退回设计。该静态门禁不替代实测，不要求多路线搜索或冻结前上板；禁止用“单kernel/UB可容纳”直接推断低时延。已验证且路线未变的完整复用工程沿用有效证据，旧run不追溯补写门禁。
 
+所有新生成任务都在既有设计评审中分析 workload 的 shape、dtype、布局与语义，并据此设计 tiling。先读[知识路由](references/tiling-knowledge/references/common/reading-routes.md)命中的相关正文，再按[shape 设计与交接](references/shape-tiling.md)把选择落实到 host/kernel。知识库保留[基础分类与增强参考](references/tiling-knowledge/INDEX.md)，不要求通读全部文档；资料来源、适用条件、参数和取舍写在现有 DESIGN/评审材料中。该步骤复用原设计门禁与验证，不增加执行阶段、必填 JSON 或性能阈值；现有冻结 run 不追溯补读。
+
 仅在用户指定拆分，或已有证据支持评估独立 C/V 路线时，读取 [C→V 串行分支](references/cv-serial.md)。从 shape/workload 和外部合同出发，在首次生成前评估中间 GM 成本、检索成熟实现并筛选模板与 tiling；据此冻结内部接口。一项父任务管理 C/V 子任务，沿用完整 case、目标和总预算。完整实现可直接复用时，不为了走分支而拆分。
 
 ## 执行分工

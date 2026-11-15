@@ -1,0 +1,380 @@
+{
+  "source": "ascendc-tiling-design knowledge snapshot experimental_REV5, captured 2026-11-05",
+  "license": "CANN Open Software License Agreement 2.0",
+  "distribution_note": "The hashes below identify original source bytes, not delivered bytes. Markdown trailing whitespace and final blank lines are normalized; the operator entry is adapted to INDEX and its direct-AscendC workflow. Stale reduction navigation anchors are corrected to the included detailed algorithm pages or current headings; algorithm content is unchanged by those link fixes. Each PR package FILES.json records the actual delivered path, bytes and SHA256. CANNBot documents use reviewed three-way merges to retain upstream additions.",
+  "historical_reading": "Availability and later packaging do not prove per-author reading before generation.",
+  "files": [
+    {
+      "source_path": "evals/evals.json",
+      "sha256": "42936c6265e679762e86868fd65a6e071d5dd111d6a2cc8d7c44363455bda66b",
+      "bytes": 1868,
+      "relative_to_foundation": "unchanged",
+      "distribution": "not distributed: evaluation fixture"
+    },
+    {
+      "source_path": "references/broadcast/dynamic-ub-broadcast.md",
+      "sha256": "8d0fe5304c1399385b3faaf1964f22717f9ee236f1912ecf130f62907d5f2abc",
+      "bytes": 2750,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/broadcast/nddma-broadcast.md",
+      "sha256": "b7a1aca510fde5d007325f3df3842901fb5f6a0d68fb823633a4f6f4b5344c75",
+      "bytes": 6979,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/broadcast/onedim.md",
+      "sha256": "9b06639c66acdd912d39289720aa2ec668c9f4d1df7f423c9f601c2ce63a5738",
+      "bytes": 4658,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/broadcast/patterns.md",
+      "sha256": "a5da6eee04624b005022cc13135f23c900c6adda91938e0e53464b9d13e928ca",
+      "bytes": 5729,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/broadcast/ub-broadcast.md",
+      "sha256": "4aa3bffcf13401bfa2e2f2d13525a23bb107cf7ebf50f900db54bb08dccaa6ab",
+      "bytes": 10763,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/common/api-precision-notes.md",
+      "sha256": "19a319feb0cbb40b2cbacff0e40af7f360f2ea976b57d3c82c939c57e7f77e11",
+      "bytes": 13755,
+      "relative_to_foundation": "added",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/common/operator-patterns.md",
+      "sha256": "27f8127552dca527256639f3ee1d8ff75ed28060004392d0a7aa252db821172d",
+      "bytes": 6081,
+      "relative_to_foundation": "added",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/common/resource-lifetime.md",
+      "sha256": "81d5fd021e56fa08604a21701eb16b8511182a8555a4252614136f7b10e73a0d",
+      "bytes": 10275,
+      "relative_to_foundation": "added",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/common/runtime-cost.md",
+      "sha256": "599cf1d36842fff53867f3f045f1cb78db4e8c2ac8f209b8d52674cc97498619",
+      "bytes": 4040,
+      "relative_to_foundation": "added",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/common/shape-selection.md",
+      "sha256": "4bc2f4f4cd5e9782892435eb19547c60846b2fdca457eb8ff0980d6fd43b8915",
+      "bytes": 6348,
+      "relative_to_foundation": "added",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/conversion/patterns.md",
+      "sha256": "3b11c42fec83631ee8b2c26eefd3ac7b16b2606b6a09ea7ad15991c0b806e306",
+      "bytes": 7971,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/elewise/patterns.md",
+      "sha256": "e420938ab9b2f82b8d5e83a48fafec80eae487d5ffc8d850ebd23c66cc2d3ccc",
+      "bytes": 2209,
+      "relative_to_foundation": "modified",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/elewise/tiling.md",
+      "sha256": "c831fde4315660951014238c66bd8b8a291c556884c21b48ed6af1324e8e532f",
+      "bytes": 18323,
+      "relative_to_foundation": "modified",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/design/_governance.md",
+      "sha256": "ad1bddc0e6ef72d8130f71dac3fa8dbf250755c88ea84b1aedd4428edabf1959",
+      "bytes": 8264,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/design/execution.md",
+      "sha256": "2c13d95ec96cb1106694cdfc976f3dfb9d57a5b5de432251206fad1ed377ada0",
+      "bytes": 27699,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/design/resources.md",
+      "sha256": "36c29cd0eb871d5357a461228ea4e7431caf25f889fb3ae5c1ac7753fcfe5f0e",
+      "bytes": 19554,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/design/shape.md",
+      "sha256": "d7aba4c9f89b0422b630646f922fbe4705ff5329645e7f3bc85829a3b4c23a0b",
+      "bytes": 17788,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/foundation/composition.md",
+      "sha256": "d23c46ad2d8e731b24c22826c574de8e529d34a27d8391a9cbdbc59633379923",
+      "bytes": 7648,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/foundation/extension_points.md",
+      "sha256": "389fbd88a946c032bc578003b2e2334246f6e49e912dd150260092f36763984e",
+      "bytes": 10045,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/foundation/fundamentals.md",
+      "sha256": "97841e1a8de2f7e0d1c7471729c47660cf6dd23f5d64e1f384507b4ad3322020",
+      "bytes": 14480,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/foundation/roofline.md",
+      "sha256": "1925bae9289b83b0cb193e9d3c5229535b6d72dc3dea9d23d9b9ac641f70f499",
+      "bytes": 11554,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/implementation_ref.md",
+      "sha256": "c950dec94c4148d46e1967057461a105819d233958daa5b7e693bf9cdccbe2f4",
+      "bytes": 12398,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/patterns.md",
+      "sha256": "2dd2a9c6d500a6aed50b4d8b54f9e40cb3f2a802660142e075842d08270d98b6",
+      "bytes": 15963,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/specialization/feature_flags.md",
+      "sha256": "460d0b301f587f7f244faa8adbe16907ba4ebf83779051679c39eb206a0bf040",
+      "bytes": 6388,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/specialization/sparse_design.md",
+      "sha256": "a8e6d32e88dc421896645eda7050f56bc1ba80c5dffb597326c1a6977d474711",
+      "bytes": 7220,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/subfamilies/base_design.md",
+      "sha256": "e908ea3ee3bcdb0142b96158554140f5552c255614cef58283bb31a752c360c6",
+      "bytes": 20247,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/flashattention/subfamilies/quantization_design.md",
+      "sha256": "804828aa03e475264bb3a6a1d57b94930d4f5f5b2d7a04775d01777c43f81e5b",
+      "bytes": 9258,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/matmul/ascendc-api-gmm-tiling.md",
+      "sha256": "90d9b2c693a9fb876326157a618e383413c28cf660e8d4f92941a96b6c593cb1",
+      "bytes": 11915,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/matmul/ascendc-api-matmul-tiling.md",
+      "sha256": "d2d1a460951b3fbf013c01cd21a1ebeb7014b3501ff7681f36cb77524bdcf3f5",
+      "bytes": 15982,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/matmul/patterns.md",
+      "sha256": "b739769df779f5c97f2d689de57476c3a6d3cb45280a9e907eee86fb3ab19d33",
+      "bytes": 1338,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/pooling/patterns.md",
+      "sha256": "fd0260357ca8cee6b710e4a0c1a409397f2c63a1afb2cb849b4c784c87bbd093",
+      "bytes": 6155,
+      "relative_to_foundation": "added",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/alg-dichotomy.md",
+      "sha256": "86baec84fd2fef8a4ac897755ed3181855c6e33973bc9368f51e89548b2a0737",
+      "bytes": 1811,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/alg-group-reduce.md",
+      "sha256": "a093e609d217b38db7b739ff2f924e977d1b0abd6c5f18023623625cfebff5d5",
+      "bytes": 3022,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/alg-welford.md",
+      "sha256": "6c8e784dad546cb1caa07867596721b3d1c8ecc746396df5392054f44d84eb28",
+      "bytes": 2245,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/algorithms.md",
+      "sha256": "7d39036a799083c76990d1b4bee216b5fec8efd417f66f81ef824150270aa863",
+      "bytes": 1853,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/ar-colsplit.md",
+      "sha256": "751885c03f5e0382581969d03a3de084a9fc578f1e0c1396767f4954ebf1fbdc",
+      "bytes": 11623,
+      "relative_to_foundation": "modified",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/ar-fullload.md",
+      "sha256": "8f734049c794116162ef2b99a4c87c180de778745b9a128babd16bff8f587636",
+      "bytes": 11661,
+      "relative_to_foundation": "modified",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/ar-merge-row.md",
+      "sha256": "6e930ac7a9c60744c8d08465f59ff4f9e5f1230d8278a7ae39af033f76f59e93",
+      "bytes": 10973,
+      "relative_to_foundation": "added",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/ara-fullload.md",
+      "sha256": "621e3770b5ad87c0a852eb639fac7bfea7b7c231380d66414aa2ba06cd50a1e2",
+      "bytes": 7331,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/ara-rowsplit.md",
+      "sha256": "e7c5be5d9f510f22c989fa443a8dfe5e929312b2ccb82cb3cc59f2fdf83d9d25",
+      "bytes": 7280,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/multi-axis-transform.md",
+      "sha256": "2a18e0f523a8101607fc3fbe388517869ce25bd6d2f51be57444f46617f7d96f",
+      "bytes": 2866,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/multi-output-buffer.md",
+      "sha256": "e9d2991c887971a49b9cec263cb50ec94d6a0b731daed3ff10488d0106fb6d88",
+      "bytes": 3968,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/norm-fusion.md",
+      "sha256": "5defe10edb94c23907044dceb697b1843103bdaadbef270893da1608b5ae3e13",
+      "bytes": 10450,
+      "relative_to_foundation": "added",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/patterns.md",
+      "sha256": "b30841a340dbdd436bdf20c4cc9a2c447bccf63aaf761a358bba2e80896a400f",
+      "bytes": 10947,
+      "relative_to_foundation": "modified",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/tiling-fields.md",
+      "sha256": "e0ad1169ab9272c9266922980da1b65863c64383b720704badba1fdde9e3f2f8",
+      "bytes": 3698,
+      "relative_to_foundation": "unchanged",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/reduction/with-index.md",
+      "sha256": "8496391bad09f0eb7815e7b48680e08de69c9ed210f395a80bb4b0a111fd4ec2",
+      "bytes": 10578,
+      "relative_to_foundation": "modified",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/sort/alg-two-level-mrgsort.md",
+      "sha256": "77263fc2a6766bb2d70a447128d11ac4cd7449f0ee559e4286f22e5b622858d3",
+      "bytes": 29121,
+      "relative_to_foundation": "modified",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "references/sort/patterns.md",
+      "sha256": "28cd586a46ff3cd2f4b75c84899efa6a91f8c422ebd4c9e49d95ec418e5da4e8",
+      "bytes": 9926,
+      "relative_to_foundation": "modified",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    },
+    {
+      "source_path": "SKILL.md",
+      "sha256": "7f0caaa3dc65737512e17c3f8f8ba405297a7b71177e43e4b7f0236f62df9299",
+      "bytes": 7005,
+      "relative_to_foundation": "modified",
+      "distribution": "knowledge Markdown; INDEX adapted to host workflow"
+    }
+  ],
+  "supplement": [
+    {
+      "path": "add-rmsnorm-keys.md",
+      "sha256": "c38d28423f8e25f42f2f2d60d7ff1f3ef36b428d6715727ea8f3154647baef8d"
+    },
+    {
+      "path": "inference-routes.md",
+      "sha256": "ea6afb7b038230083d87db36066a7d7d10be0dbf979b6fd32cdd2af9666bdc16"
+    },
+    {
+      "path": "knowledge-coverage.md",
+      "sha256": "8e9d54978bd523a4594c774a12f55de4c1ba8b6e0859c5938700c09960ab9e80"
+    },
+    {
+      "path": "vector-recipes.md",
+      "sha256": "b950ea9d68ce981d90e7a95f47dc9259f6d6f5720ba83a59d3310de7b823107c"
+    },
+    {
+      "path": "vector-source-evidence.md",
+      "sha256": "458725c2b716f48cd2d3957ad420d630170f3af30c3482bc3df526d2de833325"
+    }
+  ]
+}

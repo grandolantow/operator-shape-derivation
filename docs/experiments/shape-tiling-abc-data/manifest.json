@@ -1,0 +1,64 @@
+{
+  "unit": "microseconds",
+  "provenance": {
+    "scatter_csv_sha256": "81d5202d7a51f72d42f47786270dc30d7dc370076b4f72b21acdbb2e9b0c0183",
+    "histc_review_sha256": "9d471620e835cc97a40425a33de24ab26e1d469cddf56d7aca36ebc165e8aab9",
+    "rms_evidence_tar_sha256": "9d6d846064d6e3b55055dc3ad595037b24e4f915e256597ea967b47b6dea89a4",
+    "rms_pair_input_sha256": "3747b48c2b3bbe15f957baa41369c92e474c805eb9fce7bd3b818c7bc92a3c45",
+    "rms_contract_sha256": "476c7e48aa8db5cc14137eeca496fab0748415f7d5dea3ad227cbc0417e15886",
+    "rms_4_c1_source_sha256": [
+      "2969aaa5e3cb4489267feb1d565f79d1c2c97b7897f5b386f14e4ce251727848",
+      "36b6d9b01e33083b7cdf92ab4605536113dcd17f4c9e67f85b78504dc38cda05",
+      "c442ef0cba2c37293368cbe44e171e9d762ca8de72dad412460f1abe76b95194",
+      "923b65f6f745dd12b0d113deba9f70ad095c60766eb77fa00fb0749f8a187236"
+    ],
+    "interpolate_a_c1_index_sha256": "1804f5e9dc57926b27493384c90b63e6d5286b26975a93f143d242a1d277251f",
+    "interpolate_ab_recapture_index_sha256": "240375170b6d9e65cbac3a62c7661cf141ebf74a2b6cdf571a3bffbd705dc5c8",
+    "histc_A_B_source_sha256": "150a7ee313e0aed53a184d6a967a0af17a05c5e951555cfea8da90fb417ee161",
+    "rms_A_B_source_sha256": "6ee65827906ab4ed6f9ed269d659691b2ecb7de6a4b82e5a92a74010f9144f0f"
+  },
+  "limitations": {
+    "all": "Original quick summaries; may include warmup/initialization; cross-time/cross-device comparisons do not establish statistical significance or pure kernel time.",
+    "histc": "A/C1 and current A d012/B 7c18 tables; A/C1 ratio column rounded. A/B source does not export all contract parameters or input-byte identity.",
+    "rmsnorm": "156 A/C1 and 156 A/B, with identical A times by case across the two tables. Original B 0-33 values are two-decimal prints. Original C1 failed/UNVERIFIED parent states remain; posthoc data acceptance is separate from native final acceptance.",
+    "interpolate": "72 cases use historical A/C1 and newly recaptured B. Mode is from A index and cannot independently establish B mode or identical input bytes.",
+    "scatter": "41 direct values, derived cross-shard A; case20 lacks native performance.json and uses original parser evidence."
+  },
+  "files": {
+    "histc_15_a_c1.csv": {
+      "sha256": "09746c07387fcdc976b76d3a74d8def1d44b62f698d5a4b5da33f2daa4169305",
+      "rows": 15,
+      "export_source_sha256": "474471dc4ec642f70922dcf9a5128d6d9cde9fdd3a7c8d0498540921453480be"
+    },
+    "interpolate_72.csv": {
+      "sha256": "71bde4f1dcb15995de814f1b7312462cc80a0ccb1d349bff88cc3fc28b831e55",
+      "rows": 72,
+      "export_source_sha256": "4eeeaee3d1a09c8dc0da82b32a5fa628166f8a9f020e2619a73276d6b7bb1746"
+    },
+    "rmsnorm_156_a_c1.csv": {
+      "sha256": "dc4c20cb4ff249f4547ba9801b732139574a9a15727a9248512489c495ef7cb1",
+      "rows": 156,
+      "export_source_sha256": "56ed4e301eeab7e2cc1dca15aae6a7b7f9b32693aec15b1e0b9f76de83c56632"
+    },
+    "scatter_41.csv": {
+      "sha256": "e481d8acbc0d086e0544b8260c91eef2c6e79aa18d946ca55a575aa51038944e",
+      "rows": 41,
+      "export_source_sha256": "81d5202d7a51f72d42f47786270dc30d7dc370076b4f72b21acdbb2e9b0c0183"
+    },
+    "histc_15_a_b.csv": {
+      "sha256": "b85f393ecc1fe89bd3b6bc90baaeb5096533c23618b70a3bad1d117782e7ce8e",
+      "rows": 15,
+      "export_source_sha256": "c72299ab7142253ec9274fbb05eddb035b1b0ef8b38f2cc88166f079d025a836",
+      "paired_source_sha256": "150a7ee313e0aed53a184d6a967a0af17a05c5e951555cfea8da90fb417ee161",
+      "limitations": "Input byte identity and full stream attribution are not established. Historical shared-resource conditions apply. Source provides shape and dtype; additional contract parameters and byte identity are not asserted."
+    },
+    "rmsnorm_156_a_b.csv": {
+      "sha256": "b03cb2fe4f1ee64f93edcecd52aa9a10912c7f21656dfeadba751f86977e8966",
+      "rows": 156,
+      "export_source_sha256": "c5e2a0bcc1b339a19d1e3eb8081f313eabfd41993585374dacd9a3791bc3036e",
+      "paired_source_sha256": "6ee65827906ab4ed6f9ed269d659691b2ecb7de6a4b82e5a92a74010f9144f0f",
+      "limitations": "Original tool values may include warmup/init; B cases 0-33 are two-decimal prints. No active-only timing asserted. B build identity requires original evidence."
+    }
+  },
+  "publication_transform": "CRLF to LF only; export_source_sha256 identifies owner export bytes, sha256 identifies published bytes; values unchanged"
+}
