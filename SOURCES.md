@@ -12,6 +12,6 @@
 
 安装manifest分别记录工作流源码位置、外部CANNBot路径、实际skills/agents/hooks来源与哈希。同名技能内容冲突时报错，不静默覆盖。
 
-## Tiling 补充卡片
+## Tiling 知识
 
-`skills/ascend-op-workflow/references/tiling-knowledge/` 维护本工作流的选型、资源边界与运行期/精度补充。改编来源、固定提交、原文路径及许可集中在该目录的 [SOURCES.md](skills/ascend-op-workflow/references/tiling-knowledge/SOURCES.md)。基础类别知识继续读取外部 CANNBot；工作流选型与资料冲突的处理见[生成设计评审](skills/ascend-op-workflow/references/generation-design-review.md#知识来源与策略优先级)。
+`skills/ascend-op-workflow/references/tiling-knowledge/` 保留本工作流独有和增强知识的正文、公式与案例，从 [INDEX.md](skills/ascend-op-workflow/references/tiling-knowledge/INDEX.md) 按问题读取。原 55 份知识文档的去向、已核对的 32 份重复正文、混合文档的增量、来源版本与许可在就近 [SOURCES.md](skills/ascend-op-workflow/references/tiling-knowledge/SOURCES.md) 维护；确认重复的基础资料才引用 CANNBot。冲突时本工作流策略优先，规则见[生成设计评审](skills/ascend-op-workflow/references/generation-design-review.md#知识来源与策略优先级)。
