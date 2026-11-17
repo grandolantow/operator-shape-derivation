@@ -11,3 +11,7 @@
 本仓不存凭据、代理认证、机器私有配置、模型权重或真实任务大日志。环境记录和算子产物归属任务目录。
 
 安装manifest分别记录工作流源码位置、外部CANNBot路径、实际skills/agents/hooks来源与哈希。同名技能内容冲突时报错，不静默覆盖。
+
+## Tiling 补充卡片
+
+`skills/ascend-op-workflow/references/tiling-knowledge/` 维护本工作流的选型、资源边界与运行期/精度补充。改编来源、固定提交、原文路径及许可集中在该目录的 [SOURCES.md](skills/ascend-op-workflow/references/tiling-knowledge/SOURCES.md)。基础类别知识继续读取外部 CANNBot；工作流选型与资料冲突的处理见[生成设计评审](skills/ascend-op-workflow/references/generation-design-review.md#知识来源与策略优先级)。
