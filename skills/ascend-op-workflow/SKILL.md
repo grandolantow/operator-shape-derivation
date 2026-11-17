@@ -31,6 +31,8 @@ workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/�
 
 生成入口为 CANNBot `plugins-official/ops-direct-invoke/AGENTS.md`。使用其真实角色与 `workflows/task-prompts.md` 对应模板，完成环境、DESIGN/PLAN、WALKTHROUGH、开发、审查、修复和验收。Codex原生角色可按项目模型/并发规则复用代理，记录角色兼任和独立性，不能把未实际执行的阶段记为通过。CANNBot源码与模板保持只读。
 
+新生成或改变主要数据通路时，先按[通用知识路由](references/tiling-reading-routes.md)组合算子家族与执行策略，读取相关正文后再形成设计；将相关条件、取舍和实现安排写入已有 DESIGN 的方案适用性表，随设计交给开发者；开发者实现前读取同一组相关正文，原走读核依据、原代码检视核实现，原验证按这些语义与边界核对冻结合同。完整复用且证据有效时沿用原设计。
+
 生成含 Vector 计算的算子时，在设计与开发交接中应用 [Vector 方案选型](references/vector-patterns.md)：按平台和算子特征读取已有知识卡片，在 DESIGN 说明采用、不适用或待确认的方案；适用方案落实到首版，代码检视核对实现位置和未采用理由。
 
 新生成或改变主要计算路线时，在实现前执行[生成设计评审](references/generation-design-review.md)：设计前核查获准组件的支持域与精度机制，设计中列实际操作粒度成本，独立走读分别判断正确性与性能可行性。主协调者读取设计及证据，运行 `scripts/design_check.py`；未闭合的风险退回设计。该静态门禁不替代实测，不要求多路线搜索或冻结前上板；禁止用“单kernel/UB可容纳”直接推断低时延。已验证且路线未变的完整复用工程沿用有效证据，旧run不追溯补写门禁。
@@ -55,7 +57,7 @@ workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/�
 1. **shape推导**：使用 `operator-shape-derivation` 核对模型配置、执行轴、调用链和已提供 profiling。区分观测/推导/用户配置/假设。构造输入需要关联 metadata、state、量化布局时显式建模；不能只按 shape 去重。按覆盖需要使用 `op-case-generator`；case 数量不固定。详见[benchmark 接入](references/benchmark.md)。
 2. **workload与可执行 benchmark**：准备 definition、workload、reference、inputs、manifest 和必要 runner；按目标仓库真实 schema/loader 验证，再部署到核实的 Level/独立 problem 目录。记录构造与 loader 证据；schema 通过不等于 NPU 正确。有状态算子提供同 S0 重置和完整输出/状态检查。
 3. **外部合同冻结**：将接口、精度、全量正确性与10例性能集合、超大分类、计时、R/G身份、环境、预算和不可变项写入OPERATOR_CONTRACT；归档源码和输入哈希。新正式run自动强制固定10例与逐轮复盘；按合同传 `--optimization-seconds`（默认约定18000），用户预算优先；仅生成再加 `--stage-scope generation_only`。旧run不原地补写身份字段。仅选定 C/V 路线后冻结该修订的内部接口；不得把它预设为所有首版的约束。
-4. **直接生成首版（按需复用）**：由Codex负责，按[生成设计评审](references/generation-design-review.md)完成路线核查、操作粒度成本表和独立性能可行性评审，再将已核对的设计记录及检查回执随任务交给开发者；不强制首版前进行多路线性能搜索。通过 `ops-direct-invoke` 生成缺失AscendC部分；C/V分支另完成[选型与边界冻结](references/cv-serial.md)。向真实生成角色传入工作副本、合同、完整正确性集合、固定10例性能集合和父目标；首个全量正确版本立即冻结G，随后按同协议测量性能并核对原始日志/库身份。设计记录纳入工程归档；结构或操作粒度实质偏离已审设计时先回报design_issue并复审，已冻结G则作为O对原G优化。本阶段的合格实测证据供第5阶段直接验收，不为切换阶段重复测量。用户要求与直接生成比较时，按[生成对照](references/generation-comparison.md)建立隔离且同条件的两路；不将准备prompt称作已生成。
+4. **直接生成首版（按需复用）**：由Codex负责，按[生成设计评审](references/generation-design-review.md)及[shape→tiling 短指南](references/shape-tiling.md)完成路线核查、操作粒度成本表和独立性能可行性评审，再将已核对的设计记录及检查回执随任务交给开发者；不强制首版前进行多路线性能搜索。通过 `ops-direct-invoke` 生成缺失AscendC部分；C/V分支另完成[选型与边界冻结](references/cv-serial.md)。向真实生成角色传入工作副本、合同、完整正确性集合、固定10例性能集合和父目标；首个全量正确版本立即冻结G，随后按同协议测量性能并核对原始日志/库身份。设计记录纳入工程归档；结构或操作粒度实质偏离已审设计时先回报design_issue并复审，已冻结G则作为O对原G优化。本阶段的合格实测证据供第5阶段直接验收，不为切换阶段重复测量。用户要求与直接生成比较时，按[生成对照](references/generation-comparison.md)建立隔离且同条件的两路；不将准备prompt称作已生成。
 5. **轻量验收与建立G**：轻量指先做一次完整的验收决策、不预先展开进化搜索，不减少全量精度、固定10例、预热/重复或源码/库身份检查。冻结首个全量正确版本，完成同协议 R/G 测量并记录 generation result；调用 CLI `decision` 读取已归档证据。`auto` 下达标交付 G，优化记 `NOT_NEEDED`；未达生成目标记录 `GENERATION_TARGET_UNMET` 并进入优化。没有正确性或有效性能证据时先修复/补测，不作达标推断。完整已有 AscendC 复用路线记 generation=SKIPPED_REUSED，验证不可跳过。新 C→V 组合需 C 独立、V 独立和组合验证；G 包括 C、V、边界、适配及统一 runner，不能用组件通过替代父任务通过。
 6. **按需进入进化**：仅在 `auto` 验收性能未达标，或用户明确选择 `full` 持续优化时，按所选Codex＋Claude协作或Codex独立模式，读取本 workflow 的[CANNBot 执行适配](references/cannbot-execution.md)，由其轻量/原生入口实际调用外部 `ops-perf-evolution`；显式传父任务剩余预算（默认最多5轮/每轮5候选）、固定G、目标（默认1.5×）和正式计时协议，核实接收及真实候选执行证据。
 
