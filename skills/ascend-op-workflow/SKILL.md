@@ -29,11 +29,11 @@ workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/�
 
 默认直接生成可运行首版，保留必要的语义、精度、资源和同步设计审查。实现来源（复用 / 模板适配 / 新生成）与结构分别决定；生成统一走**直接AscendC**，不调用TileLang设计、编译、调优或转译。首版前不强制 C/V 拆分、独立 pack/softmax/crop、多kernel或固定中间GM布局；由支持域、目标平台与成本证据选择。实现结构属于可修订设计，不是外部合同的不可变项。C/V拆分不强制重写已有组件。
 
-生成入口为 CANNBot `plugins-official/ops-direct-invoke/AGENTS.md`。使用其真实角色与 `workflows/task-prompts.md` 对应模板，完成环境、DESIGN/PLAN、WALKTHROUGH、开发、审查、修复和验收。Codex原生角色可按项目模型/并发规则复用代理，记录角色兼任和独立性，不能把未实际执行的阶段记为通过。CANNBot源码与模板保持只读。
+新生成或改变主要计算路线时，先按本工作流的[生成设计评审](references/generation-design-review.md)组织 shape 分组、tiling 选型和知识取舍，按[Tiling 知识入口](references/tiling-knowledge/INDEX.md)读取命中正文，再将要求及设计交给 CANNBot 原角色完善与执行。知识来源与策略优先级、参数到实现的交接统一在该评审说明中维护。主协调者读取设计及证据，在批准实现前运行 `scripts/design_check.py`；未闭合的风险退回设计。该静态门禁不替代实测，不要求多路线搜索或冻结前上板；禁止用“单kernel/UB可容纳”直接推断低时延。已验证且路线未变的完整复用工程沿用有效证据，旧run不追溯补写门禁。
 
-生成含 Vector 计算的算子时，在设计与开发交接中应用 [Vector 方案选型](references/vector-patterns.md)：按平台和算子特征读取已有知识卡片，在 DESIGN 说明采用、不适用或待确认的方案；适用方案落实到首版，代码检视核对实现位置和未采用理由。
+生成入口为 CANNBot `plugins-official/ops-direct-invoke/AGENTS.md`。使用其真实角色与 `workflows/task-prompts.md` 对应模板，完成环境、DESIGN/PLAN、WALKTHROUGH、开发、审查、修复和验收；将本工作流选定的策略与评审要求作为任务附件传入。Codex原生角色可按项目模型/并发规则复用代理，记录角色兼任和独立性，不能把未实际执行的阶段记为通过。CANNBot源码与模板保持只读。
 
-新生成或改变主要计算路线时，在实现前执行[生成设计评审](references/generation-design-review.md)：设计前核查获准组件的支持域与精度机制，设计中列实际操作粒度成本，独立走读分别判断正确性与性能可行性。主协调者读取设计及证据，运行 `scripts/design_check.py`；未闭合的风险退回设计。该静态门禁不替代实测，不要求多路线搜索或冻结前上板；禁止用“单kernel/UB可容纳”直接推断低时延。已验证且路线未变的完整复用工程沿用有效证据，旧run不追溯补写门禁。
+生成含 Vector 计算的算子时，在设计与开发交接中应用 [Vector 方案选型](references/vector-patterns.md)：按平台和算子特征读取命中卡片，在 DESIGN 说明采用、不适用或待确认的方案；适用方案落实到首版，代码检视核对实现位置和未采用理由。
 
 仅在用户指定拆分，或已有证据支持评估独立 C/V 路线时，读取 [C→V 串行分支](references/cv-serial.md)。从 shape/workload 和外部合同出发，在首次生成前评估中间 GM 成本、检索成熟实现并筛选模板与 tiling；据此冻结内部接口。一项父任务管理 C/V 子任务，沿用完整 case、目标和总预算。完整实现可直接复用时，不为了走分支而拆分。
 
