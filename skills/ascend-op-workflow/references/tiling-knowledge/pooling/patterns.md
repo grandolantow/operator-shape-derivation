@@ -84,4 +84,4 @@ winCopies / outCopies = 各自 queue 的物理槽位深度 × 每槽份数
 - 小特征图全载（候选 d）失败后的核内分段，形态上接近 EleWise 的 UB 切分 +
   窗口边界守卫，可参考 [../elewise/tiling.md](../elewise/tiling.md) 的公式风格。
 
-来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
+[来源](../SOURCES.md)。

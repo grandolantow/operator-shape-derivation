@@ -234,4 +234,4 @@ Tile N+1:              CopyIn(row1) → Compute(row1) → CopyOut(row1)
    dtype 分支本身不等于调度自适应
 4. **多行合并**: 行较短、行数多时评估 MergeN 子路线，见 [ar-merge-row.md](ar-merge-row.md)
 
-来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
+[来源](../SOURCES.md)。

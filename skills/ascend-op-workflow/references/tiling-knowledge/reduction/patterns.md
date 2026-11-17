@@ -233,4 +233,4 @@ Stage2:
 | Norm 类与融合的"统计 → 保留/重读/重算 → 输出"组织 | [norm-fusion.md](norm-fusion.md) |
 | 物理资源生命周期与队列/事件取证（跨类别） | [../common/resource-lifetime.md](../common/resource-lifetime.md) |
 
-来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
+[来源](../SOURCES.md)。

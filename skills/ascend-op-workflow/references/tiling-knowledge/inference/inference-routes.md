@@ -33,8 +33,7 @@
 | 扫描 / 累积类 | Cumsum；kda_gate_cumsum_vllm | 短序列 / chunk 全载 | 扫描长度短，如逻辑 `[T,H,D]=[64,16,128]`，按 head/channel 切分后处理时间轴 |
 | 扫描 / 累积类 | Cumsum；kda_gate_cumsum_vllm | 时间分块 + 局部扫描 | 时间轴长，如 `[4096,16,128]`；全局 Cumsum 需跨块前缀传播，chunk 内 Cumsum 按块重置 |
 
-**落实到实现前的检查。** RoPE 必须保持相邻或半区配对，SwiGLU 的两路特征要同时可取；动态量化要保持 per-token/per-group 统计域、scale 写出及打包边界；Norm/Softmax 先取得完整统计再输出。Gather、分页 KV 与 MoE 重排核实 page/slot/expert 映射、离散行与连续片段。KV 转置计入二维块、临时量和尾块。TopK 分段后再归并，TopP 还需概率累计与截断，MoE gating 保留分组和归一化语义。扫描先区分 chunk 内重置与全局跨块前缀；这里只描述算法知识，不是本次 Cumsum 设备结论。
+**落实到实现前的检查。** RoPE 必须保持相邻或半区配对，SwiGLU 的两路特征要同时可取；动态量化要保持 per-token/per-group 统计域、scale 写出及打包边界；Norm/Softmax 先取得完整统计再输出。Gather、分页 KV 与 MoE 重排核实 page/slot/expert 映射、离散行与连续片段。KV 转置计入二维块、临时量和尾块。TopK 分段后再归并，TopP 还需概率累计与截断，MoE gating 保留分组和归一化语义。扫描先区分 chunk 内重置与全局跨块前缀。
 
-**哪些可复用原仓？** 原对照基于 hicann/cannbot-skills 的 80bd6c22，而非当前发行版的缺失清单。逐元素、广播、AR/ARA、Group Reduce、排序及部分 Gather/前缀方法已有基础。不要另造同名算法；重点补配对/融合、分段输出、Merge-row 选择和推理索引映射。使用现场版本已有的分类；未匹配可走 generic，仍须保留上述语义约束。
 
-来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
+[来源](../SOURCES.md)。

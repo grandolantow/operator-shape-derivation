@@ -47,4 +47,4 @@ Step 2 — dtype × 运算 判定（决定 Compute 路径）:
 | EleWise Tiling 详细计算（常量、公式、模板、dtype 分支 UB 预算） | [tiling.md](tiling.md) |
 | Broadcast 场景路由（输入 Shape 不同时） | CANNBot `references/broadcast/patterns.md` |
 
-来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
+[来源](../SOURCES.md)。

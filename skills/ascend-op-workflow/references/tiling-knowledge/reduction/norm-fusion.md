@@ -149,4 +149,4 @@ reserveBytes + Σ_i ( align_up(bytes_i, alignBytes) × copies_i ) ≤ ubSize
   CANNBot `references/reduction/tiling-fields.md`（字段与 tmpBuf）、
   [../common/resource-lifetime.md](../common/resource-lifetime.md)（物理生命周期与守卫）。
 
-来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
+[来源](../SOURCES.md)。

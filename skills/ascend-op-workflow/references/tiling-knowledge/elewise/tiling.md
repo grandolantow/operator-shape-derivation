@@ -380,4 +380,4 @@ K 的取值取决于 Compute 阶段选用 API 是否支持 dst/src 别名，该�
 > dtype 提示：同一模板在不同 dtype 下 `elemBytes`、`reserveBytes`（参数驻留）与对齐元素数都会变化，
 > `maxElemNum`/`ubFormer` 必须按分支重算；dtype 分支本身不等于调度自适应。
 
-来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
+[来源](../SOURCES.md)。

@@ -212,4 +212,4 @@ outQueue EnQue/DeQue → DataCopyPad → GM (M)       # B_M（或尾组 valid）
    dtype 改变输入、输出和统计缓冲的字节数及对齐需求，从而改变 `B_M_max`，
    可能改变该候选是否可行。
 
-来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
+[来源](../SOURCES.md)。

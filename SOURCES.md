@@ -14,4 +14,4 @@
 
 ## Tiling 知识
 
-`skills/ascend-op-workflow/references/tiling-knowledge/` 保留本工作流独有和增强知识的正文、公式与案例，从 [INDEX.md](skills/ascend-op-workflow/references/tiling-knowledge/INDEX.md) 按问题读取。原 55 份知识文档的去向、已核对的 32 份重复正文、混合文档的增量、来源版本与许可在就近 [SOURCES.md](skills/ascend-op-workflow/references/tiling-knowledge/SOURCES.md) 维护；确认重复的基础资料才引用 CANNBot。冲突时本工作流策略优先，规则见[生成设计评审](skills/ascend-op-workflow/references/generation-design-review.md#知识来源与策略优先级)。
+`skills/ascend-op-workflow/references/tiling-knowledge/` 保留本工作流独有和增强知识的正文、公式与案例，从 [INDEX.md](skills/ascend-op-workflow/references/tiling-knowledge/INDEX.md) 按问题读取。知识出处、历史源码证据与许可在就近 [SOURCES.md](skills/ascend-op-workflow/references/tiling-knowledge/SOURCES.md) 维护；确认重复的基础资料才引用 CANNBot。冲突时本工作流策略优先，规则见[生成设计评审](skills/ascend-op-workflow/references/generation-design-review.md#知识来源与策略优先级)。

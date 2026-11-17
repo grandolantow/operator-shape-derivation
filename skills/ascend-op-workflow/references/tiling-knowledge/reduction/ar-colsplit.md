@@ -236,4 +236,4 @@ for (uint32_t chunkIdx = 0; chunkIdx < numChunks; chunkIdx++) {
    行较短且行多时先确认整行可行性（可能回到 FullLoad/MergeN 路线），见
    [ar-fullload.md](ar-fullload.md) 与 [ar-merge-row.md](ar-merge-row.md)
 
-来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
+[来源](../SOURCES.md)。
