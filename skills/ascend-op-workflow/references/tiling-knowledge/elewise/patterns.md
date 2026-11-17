@@ -45,6 +45,6 @@ Step 2 — dtype × 运算 判定（决定 Compute 路径）:
 | 主题 | 文档 |
 |------|------|
 | EleWise Tiling 详细计算（常量、公式、模板、dtype 分支 UB 预算） | [tiling.md](tiling.md) |
-| Broadcast 场景路由（输入 Shape 不同时） | [../broadcast/patterns.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/broadcast/patterns.md) |
+| Broadcast 场景路由（输入 Shape 不同时） | CANNBot `references/broadcast/patterns.md` |
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/elewise/patterns.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

@@ -48,16 +48,16 @@ Step 2: A0 决定模式
 
 | 维度 | 选项 | 适用条件 | 详细文档 |
 |------|------|---------|---------|
-| 算法选择 | Welford Online | 分载 + 需要流式计算两个相关统计量 | [Welford 算法详解](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/alg-welford.md) |
-| 多核策略 | Group Reduce | R 太大单核处理不完 + A 太小不足以并行 | [Group Reduce 算法详解](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/alg-group-reduce.md) |
-| 精度策略 | 二分累加 | 大向量 sum 精度敏感 | [二分累加算法详解](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/alg-dichotomy.md) |
-| 索引跟踪 | With-Index | 归约+返回极值位置 | [with-index.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/with-index.md) |
+| 算法选择 | Welford Online | 分载 + 需要流式计算两个相关统计量 | Welford 算法详解（CANNBot `references/reduction/alg-welford.md`） |
+| 多核策略 | Group Reduce | R 太大单核处理不完 + A 太小不足以并行 | Group Reduce 算法详解（CANNBot `references/reduction/alg-group-reduce.md`） |
+| 精度策略 | 二分累加 | 大向量 sum 精度敏感 | 二分累加算法详解（CANNBot `references/reduction/alg-dichotomy.md`） |
+| 索引跟踪 | With-Index | 归约+返回极值位置 | CANNBot `references/reduction/with-index.md` |
 
 ---
 
 ## 通用规则
 
-以下规则适用于所有场景。Tiling 设计原则和 tmpBufSize 公式见 [tiling-fields.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/tiling-fields.md)。
+以下规则适用于所有场景。Tiling 设计原则和 tmpBufSize 公式见 CANNBot `references/reduction/tiling-fields.md`。
 
 **rLength vs rLengthAlign 参数使用对照表**:
 
@@ -119,7 +119,7 @@ AR 模式 (A1, R)，A0 = 1
 确定融合内容后必须重算整行可行性与三阶段（统计 → 保留/重读/重算 → 输出）组织，
 通用方法见 [norm-fusion.md](norm-fusion.md)。
 
-> **索引变体**：需要返回极值位置时，AR-FullLoad 用 `ReduceMax(calIndex=true)`，详见 [with-index.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/with-index.md)。
+> **索引变体**：需要返回极值位置时，AR-FullLoad 用 `ReduceMax(calIndex=true)`，详见 CANNBot `references/reduction/with-index.md`。
 
 > **AR 归约后的标量广播操作**：Level 2 Reduce 归约 [R] 后得到 1 个标量。
 > 如果后续需要将该标量广播到 [R] 向量参与逐元素运算，使用 `Adds(dst, src, scalar, count)`
@@ -172,11 +172,11 @@ ARA 模式 (A1, R, A0)，A0 > 1
 
 | 分支 | 条件 | 说明 | 详细文档 |
 |------|------|------|---------|
-| **全载（FullLoad）** | 可以在UB中处理所有R*tileA0Len数据（32字节对齐） | R 行一次放入 UB，中间结果直接复用 | [ara-fullload.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/ara-fullload.md) |
-| **分载（RowSplit）** | 其他 | 每次搬入 r < R 行，分多次归约后跨 chunk 合并 | [ara-rowsplit.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/ara-rowsplit.md) |
+| **全载（FullLoad）** | 可以在UB中处理所有R*tileA0Len数据（32字节对齐） | R 行一次放入 UB，中间结果直接复用 | CANNBot `references/reduction/ara-fullload.md` |
+| **分载（RowSplit）** | 其他 | 每次搬入 r < R 行，分多次归约后跨 chunk 合并 | CANNBot `references/reduction/ara-rowsplit.md` |
 
 > **索引变体**：需要返回极值位置时，用 `Compare+Select` 逐行迭代替代 `Pattern::Reduce::RA`。
-> 详见 [with-index.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/with-index.md)。
+> 详见 CANNBot `references/reduction/with-index.md`。
 
 > **ARA 归约后的广播操作**：Pattern::Reduce::RA 归约 [R, alignedCols] 后得到 [1, alignedCols] 的结果向量。
 > 如果后续需要将该向量广播回 [R, alignedCols] 参与逐元素运算，使用 Sub/Div/Mul 等二元 API 的
@@ -188,11 +188,11 @@ ARA 模式 (A1, R, A0)，A0 > 1
 适用: 合轴后多轴归约，比如：ARARA场景
 
 **Shape 变换**：任意 N 维 shape + axes 经三步变换压缩为 A/R 交替序列。
-详见 [multi-axis-transform.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/multi-axis-transform.md)。
+详见 CANNBot `references/reduction/multi-axis-transform.md`。
 
 ### S4: Welford Online（R 需 UB 切片）
 
-**适用**: ARA 模式下需要流式计算两个相关统计量（第二个依赖第一个的增量更新）。典型算子：reduce_var / reduce_std。参见 [Welford 算法详解](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/alg-welford.md)。
+**适用**: ARA 模式下需要流式计算两个相关统计量（第二个依赖第一个的增量更新）。典型算子：reduce_var / reduce_std。参见 Welford 算法详解（CANNBot `references/reduction/alg-welford.md`）。
 
 ### S5: Group Reduce（R 跨核）
 
@@ -227,10 +227,10 @@ Stage2:
 
 | 主题 | 文档 |
 |------|------|
-| 多输出 Buffer 方程 | [multi-output-buffer.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/multi-output-buffer.md) |
-| 通用 Tiling 字段定义 | [tiling-fields.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/tiling-fields.md) |
-| 索引跟踪变体 | [with-index.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/with-index.md) |
+| 多输出 Buffer 方程 | CANNBot `references/reduction/multi-output-buffer.md` |
+| 通用 Tiling 字段定义 | CANNBot `references/reduction/tiling-fields.md` |
+| 索引跟踪变体 | CANNBot `references/reduction/with-index.md` |
 | Norm 类与融合的"统计 → 保留/重读/重算 → 输出"组织 | [norm-fusion.md](norm-fusion.md) |
 | 物理资源生命周期与队列/事件取证（跨类别） | [../common/resource-lifetime.md](../common/resource-lifetime.md) |
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/reduction/patterns.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

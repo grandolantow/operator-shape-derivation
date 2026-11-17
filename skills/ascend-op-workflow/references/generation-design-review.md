@@ -4,11 +4,11 @@
 
 ## 知识来源与策略优先级
 
-按[Tiling 知识入口](tiling-knowledge/INDEX.md)读取本工作流命中的正文，再用任务固定版本的 CANNBot 知识、API 与模板补全设计。正文保留 shape 选型、资源、逐元素、归约/融合、Pooling、推理场景及 API 限定；已逐项确认重复的基础资料才外引。采用条件和取舍记入已有 DESIGN，资料链接只标识来源。
+按[Tiling 知识入口](tiling-knowledge/INDEX.md)读取本工作流命中的正文，再用任务选定 checkout 中的 CANNBot 知识、API 与模板补全设计。正文保留 shape 选型、资源、逐元素、归约/融合、Pooling、推理场景及 API 限定；已逐项确认重复的基础资料才外引。采用条件和取舍记入已有 DESIGN，资料链接只标识来源。
 
 设计理念、调度偏好或示例阈值与 CANNBot 资料冲突时，优先采用本工作流对当前 shape 的选型，将差异及理由交给原设计、走读和开发角色。该优先级不覆盖目标平台/SDK 已确认的支持域约束、算子语义或冻结合同；设计证据注明所选 API/模板的版本与来源位置。若证据否定所选实现，沿原 findings/design_issue 修订并复审。
 
-CANNBot 类别知识从该 checkout 的 `ops/ascendc-tiling-design/SKILL.md` 按问题定位；Vector 热点方案另见 [Vector 方案选型](vector-patterns.md)。路径、支持域和版本以现场为准，资料缺失时记录具体缺口。[就近来源清单](tiling-knowledge/SOURCES.md)记录原 55 份文档的去向、32 份重复正文的实际比对版本/哈希，以及专项文档增量与基础正文分开维护的位置；现场外部版本变化不自动覆盖本地策略。
+CANNBot 类别知识从任务 checkout 的 `ops/ascendc-tiling-design/SKILL.md` 按问题定位，来源解析沿用[引用约定](tiling-knowledge/SOURCES.md#引用约定)；Vector 热点方案另见 [Vector 方案选型](vector-patterns.md)。路径、支持域和版本以现场为准，资料缺失时记录具体缺口。[就近来源清单](tiling-knowledge/SOURCES.md)记录原 55 份文档的去向、32 份重复正文的实际比对版本/哈希，以及专项文档增量与基础正文分开维护的位置；现场外部版本变化不自动覆盖本地策略。
 
 ## 设计前核查路线
 

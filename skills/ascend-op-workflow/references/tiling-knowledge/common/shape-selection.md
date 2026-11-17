@@ -78,4 +78,4 @@
 
 实现核对、数值通过和性能改善分别依据源码、真实测试和实测结果；验收沿用工作流。
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/common/shape-selection.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

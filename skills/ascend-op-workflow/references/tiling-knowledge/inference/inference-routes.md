@@ -37,4 +37,4 @@
 
 **哪些可复用原仓？** 原对照基于 hicann/cannbot-skills 的 80bd6c22，而非当前发行版的缺失清单。逐元素、广播、AR/ARA、Group Reduce、排序及部分 Gather/前缀方法已有基础。不要另造同名算法；重点补配对/融合、分段输出、Merge-row 选择和推理索引映射。使用现场版本已有的分类；未匹配可走 generic，仍须保留上述语义约束。
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/inference/inference-routes.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

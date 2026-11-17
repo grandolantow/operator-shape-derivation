@@ -19,7 +19,7 @@
 - **epsilon 的位置**由归一化定义决定（如分母 `rsqrt(var + eps)`），属于算子语义，tiling 不得改变。
 - **累加 dtype**：通常 fp32；转换顺序为 输入 dtype → fp32 累加 → 统计量。
   fp32 中间是物理 buffer，必须入账（见第四节）。
-- 流式两个相关统计量（如 mean/var 单遍更新）可用 Welford，见 [Welford 算法详解](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/alg-welford.md)。
+- 流式两个相关统计量（如 mean/var 单遍更新）可用 Welford，见 Welford 算法详解（CANNBot `references/reduction/alg-welford.md`）。
 
 ---
 
@@ -146,7 +146,7 @@ reserveBytes + Σ_i ( align_up(bytes_i, alignBytes) × copies_i ) ≤ ubSize
   必须入资源账本**这两点。
 - 相关文档：[ar-fullload.md](ar-fullload.md)（单行全载）、[ar-colsplit.md](ar-colsplit.md)
   （核内 SplitD 与三组织）、[ar-merge-row.md](ar-merge-row.md)（多行合并）、
-  [tiling-fields.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/tiling-fields.md)（字段与 tmpBuf）、
+  CANNBot `references/reduction/tiling-fields.md`（字段与 tmpBuf）、
   [../common/resource-lifetime.md](../common/resource-lifetime.md)（物理生命周期与守卫）。
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/reduction/norm-fusion.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

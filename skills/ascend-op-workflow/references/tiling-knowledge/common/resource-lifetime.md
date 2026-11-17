@@ -49,7 +49,7 @@
   每核 tile 数 ≥ 2 且切换后核数不减少，才值得评估双缓冲；深度翻倍会挤占 tile 尺寸
   （如 elewise 的 `maxElemNum`、ColSplit 的 `chunkCols`、MergeN 的 `B_M` 都以 copies 为除数），
   切换后必须重算可行性。
-- scratch / 库 API 暂存（`Get*MaxMinTmpSize` 类查询结果）同样入账，见 [../reduction/tiling-fields.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/tiling-fields.md)。
+- scratch / 库 API 暂存（`Get*MaxMinTmpSize` 类查询结果）同样入账，见 CANNBot `references/reduction/tiling-fields.md`。
 
 ## 三、Queue / event 容量的取证方式（不得硬编码万能上限）
 
@@ -59,7 +59,7 @@
 - 不同平台/版本的事件 ID 空间、队列槽数、pipe 数**不同**：每个任务必须查**本轮** SDK
   与平台资料，禁止把某一平台的数值写成本 skill 的通用常数。
 - "不同生命周期事件必须使用不同 flagId"及平台相关的事件 ID 规则，
-  FlashAttention 设计资料有完整记录，见 [../flashattention/implementation_ref.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/flashattention/implementation_ref.md)。
+  FlashAttention 设计资料有完整记录，见 CANNBot `references/flashattention/implementation_ref.md`。
 - 当前环境缺少 kernel 侧头文件时，记录缺项并从获准的目标 SDK 核对，不能填入假设容量。
 
 ## 四、活跃块 vs 启动块 vs 物理执行单元
@@ -133,4 +133,4 @@ Host/Device 边界上每个 tiling 字段都有**位宽**：Device 侧按声明�
 - 超宽 shape 的 chunking 组织：按位宽安全地把大维度拆分为多个字段内可表示的子块。
 - 字段位宽示例：uint16 无法表示 65536；乘法前转宽，并按目标字段上限检查后分块。
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/common/resource-lifetime.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

@@ -70,7 +70,7 @@ uint32_t ComputeReduceBufSize(uint32_t rLengthAlign, uint32_t typeSize) {
 }
 ```
 
-> scratch 上限以目标环境 SDK 查询为准（`Get*MaxMinTmpSize` 类接口或 [tiling-fields.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/tiling-fields.md) 公式），
+> scratch 上限以目标环境 SDK 查询为准（`Get*MaxMinTmpSize` 类接口或 CANNBot `references/reduction/tiling-fields.md` 公式），
 > 不要硬编码跨平台常数。
 
 ---
@@ -97,7 +97,7 @@ align_up(x, a) = ceil_div(x, a) * a   （ceil_div(x,a) = (x + a - 1) / a，int64
 | `inBytes` | 输入元素字节数 |
 | `outBytes` | 归约标量输出的全部物理 buffer 字节数，包含输出队列所有槽位和独立输出 buffer；例如上方输出队列深度 2、每槽 32B 时为 64B。与其他账本项不重复计算 |
 | `accumBytes` | FP32 累加/统计驻留中**与 R 无关**的部分（标量累加器、统计缓冲等）。若分支需要整行 FP32 中间（升精度），该项变为 `accumCopies * align_up(R * sizeof(float), alignBytes)`，随 R 变化，闭式不再成立，需按定义式从无对齐上界向下收缩（方法与 [../elewise/tiling.md](../elewise/tiling.md) 第六节相同） |
-| `tmpBufSize` | Reduce API scratch（[tiling-fields.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/tiling-fields.md)） |
+| `tmpBufSize` | Reduce API scratch（CANNBot `references/reduction/tiling-fields.md`） |
 | `reserveBytes` | 参数驻留（gamma 等）、对齐与其他常驻，来自资源账本，**不能凭空填 0** |
 
 **闭式**（`accumBytes` 与 R 无关，且 `elemBytes` 整除 `alignBytes` 时精确成立）：
@@ -234,4 +234,4 @@ Tile N+1:              CopyIn(row1) → Compute(row1) → CopyOut(row1)
    dtype 分支本身不等于调度自适应
 4. **多行合并**: 行较短、行数多时评估 MergeN 子路线，见 [ar-merge-row.md](ar-merge-row.md)
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/reduction/ar-fullload.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

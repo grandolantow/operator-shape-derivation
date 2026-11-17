@@ -52,4 +52,4 @@ tiling 决定的不只是核数和 tile：从"host 决定参数"到"device 开�
 5. 相对收益：与基线的配对比较。
 没有可比基线时，允许报告绝对耗时与适配性证据，**禁止**宣称"验证过的加速"或"无回归"；"未观察到退化"只有在配对测量存在时才可写。与选型及实现核对的衔接见 [shape-selection.md](shape-selection.md)。本参考不增加专项测试流程。
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/common/runtime-cost.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

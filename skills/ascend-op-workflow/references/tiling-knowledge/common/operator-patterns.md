@@ -81,4 +81,4 @@
 - 直方图按输出桶扫描输入时，读取量可能随桶数放大；与输入分片后合并比较。只依赖当前输入片的上下界掩码可以每片计算一次，而非每桶重算，仍按具体规格验证。
 - Scatter 比较输入分片后合并与输出分片取得唯一写入权，计入排序、重扫、合并和串行依赖；重复索引要求顺序时不能为并行重排。
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/common/operator-patterns.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

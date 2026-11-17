@@ -40,4 +40,4 @@
 | 逐 token 动态量化 | `[2048,4096]` | 按行统计并量化 | 多行合并；融合后放不下时分段 |
 | 不均匀有效长度 Softmax | `[64,L_i]`，`L_i=128…8192` | 尊重有效长度的分派 | 长度分桶，前提是额外调度成本较低 |
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/inference/vector-recipes.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

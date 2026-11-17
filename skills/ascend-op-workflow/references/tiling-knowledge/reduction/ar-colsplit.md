@@ -73,7 +73,7 @@ chunkCols = min( floor_div(B, copies * alignBytes) * (alignBytes / inBytes), R )
 | `ubSize` | UB 总容量（平台查询值） |
 | `reserveBytes` | 参数/对齐/其他常驻 buffer 预留的字节数，来自资源账本，不能凭空填 0；不重复包含其他已列物理分配 |
 | `statsBytes` | 与下列两个标量缓冲互不别名的本行统计量驻留字节数（分段累计的 sum/sumsq/max 等标量或其向量形式，按实际分配和对齐计）；若使用同一物理槽，只计一次 |
-| `tmpBufSize` | Reduce API scratch（见 [tiling-fields.md](https://gitcode.com/chenshushu2020/cannbot-skills/blob/bcb8067bd6ebab19e490b317ad8250e25a18316b/ops/ascendc-tiling-design/references/reduction/tiling-fields.md)） |
+| `tmpBufSize` | Reduce API scratch（见 CANNBot `references/reduction/tiling-fields.md`） |
 | `copies` | 该统计阶段同一输入的物理份数（queue 槽位深度 × 每槽份数） |
 | `inBytes` | 输入元素字节数 |
 | `alignElems` | `alignBytes / inBytes`（要求 inBytes 整除 alignBytes；不整除时逐 buffer `align_up` 求解，方法同 [../elewise/tiling.md](../elewise/tiling.md) 第六节） |
@@ -236,4 +236,4 @@ for (uint32_t chunkIdx = 0; chunkIdx < numChunks; chunkIdx++) {
    行较短且行多时先确认整行可行性（可能回到 FullLoad/MergeN 路线），见
    [ar-fullload.md](ar-fullload.md) 与 [ar-merge-row.md](ar-merge-row.md)
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/reduction/ar-colsplit.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。

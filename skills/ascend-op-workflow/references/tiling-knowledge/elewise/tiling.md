@@ -380,4 +380,4 @@ K 的取值取决于 Compute 阶段选用 API 是否支持 dst/src 别名，该�
 > dtype 提示：同一模板在不同 dtype 下 `elemBytes`、`reserveBytes`（参数驻留）与对齐元素数都会变化，
 > `maxElemNum`/`ubFormer` 必须按分支重算；dtype 分支本身不等于调度自适应。
 
-来源与维护：[就近来源清单](../SOURCES.md)；[原始正文](https://github.com/lanhongsheng/operator-shape-derivation/blob/2619c00f74997b7d4b23ae86a77529ddc5ff0416/skills/ascend-op-workflow/references/tiling-knowledge/references/elewise/tiling.md)。本文为本工作流维护版本。
+来源与维护：[就近来源清单](../SOURCES.md)。本文为本工作流维护版本。
