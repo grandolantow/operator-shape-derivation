@@ -23,6 +23,19 @@
 
 Compressor 的特定 H/R 限制、压缩比例、page/stride、图桶或容量公式必须留在该目标的推导产物中。不要复制到新算子的通用验证规则。
 
+## Kimi K3 MlaPrologV3 漏推复盘
+
+在本案例的归档 vLLM-Ascend 版本中，带 RoPE 的 strided cache writer 与主模型 Decode 融合入口共存。盲推把前者的 `use_mla_rope=True` 限制套到了后者，继而只追分解路线，漏查权重加载时的转置和补头。定位入口应从 `AscendMLAImpl.forward` 的实际分派开始，同时核对以下路线。
+
+| 路线 | 生效条件与源码入口 | 推导到的实际权重和形状 |
+| --- | --- | --- |
+| 普通 Decode 分解 | `forward` 在融合等优先分支未命中时调用 `_mla_preprocess`。投影按逻辑 Q 头数 `H_q` 计算 | `q_b.weight [H_q×D_q,R_q]`，下游 FIA 前补齐 Q 的头轴 |
+| BF16 Decode 融合 | `mla_preprocess_only_decode` 调用 `cann_ops_transformer.mla_prolog`。本 BF16 路线核对生效的 `enable_mlapo`、原生权重支持、纯 Decode、token 上限、缓存/并行限制及 gate 布局。NoPE 时 Python caller 可传 `rope_sin=None`、`rope_cos=None` | `_process_weights_for_fused` 先转置权重，展开为 `[R_q,H_q,D_q]`，在头轴补零后展平为 `weight_uq_qr [R_q,H_pad×D_q]`。配套的 `weight_uk` 和融合输出的头轴也使用 `H_pad`，调用者随后裁回 `H_q` |
+
+这里 `R_q` 是 Q 的压缩维度，`D_q` 是 Q-B 投影的单头宽度，`H_pad` 是后端对齐后的头数。模型配置与源码可支撑两条路线的条件推导，实际启用状态需要同次启动配置或调用证据。代码定位在 `attention/mla_v1.py` 的 `process_weights_after_loading`、`_process_weights_for_fused`、`mla_preprocess_only_decode` 与 `forward`。本例的头数、对齐规则以及 wrapper 条件均以目标版本源码为准。
+
+旧 FP8 采集中，`MlaPrologV3` 权重描述符已经展示融合接口的轴顺序。采集中的 `Transpose` 经前后调用与 shape 核实作用于 AllGather 后的激活。BF16 权重的转置和补头从加载函数追到 `weight_uq_qr`，具体结果由 BF16 路线源码和模型配置推导。
+
 ## 缺少 profiling
 
 用户只给模型配置和源码，未说明是否有 profiling：先请求已有采集路径及对应运行配置，同时完成固定维度和符号接口；不因为问询超时而开始假设完整 workload。
