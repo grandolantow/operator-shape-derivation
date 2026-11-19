@@ -4,7 +4,8 @@
 
 - **完整入口：** [ascend-op-workflow](skills/ascend-op-workflow/SKILL.md)
 - **单独shape/workload：** [operator-shape-derivation](skills/operator-shape-derivation/SKILL.md)
-- **安装与使用：** [MindIE / Codex、依赖清单与一键安装提示词](docs/INSTALL.md)；Claude 为选配
+- **使用说明：** [从安装到发起、验收和续跑](docs/USAGE.md)
+- **安装与依赖：** [MindIE / Codex、依赖清单与一键安装提示词](docs/INSTALL.md)；Claude 为选配
 - **阶段与分工：** [标准工作流](docs/WORKFLOW.md)
 - **MindIE 接入：** [入口、默认 Codex 执行与作业关联](skills/ascend-op-workflow/references/mindie.md)
 - **旧入口兼容：** [迁移说明](docs/MIGRATION.md)
