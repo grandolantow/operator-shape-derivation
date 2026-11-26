@@ -55,7 +55,7 @@ class PortabilityTests(unittest.TestCase):
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         self.workspace.mkdir()
         before = self.snapshot()
-        result = self.invoke(distribution / "install_codex.py", "--task-dir", self.workspace, "--apply")
+        result = self.invoke(distribution / "install_codex.py", "--task-dir", self.workspace, "--workflow-only", "--apply")
         self.assertEqual(result.returncode, 0, result.stderr)
         installed = self.workspace / ".agents/skills/ascend-op-workflow/scripts/cannbot"
         manifest = json.loads((self.workspace / ".agents/ascend-op-workflow-install.json").read_text())

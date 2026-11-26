@@ -9,7 +9,7 @@ description: 将 AscendC、Triton 算子或 PyTorch 小算子组合串成可恢�
 
 从 `/mindie-agent` 或 `$mindie-agent` 发起算子开发时，读取 [MindIE 接入与执行关联](references/mindie.md)，沿用当前宿主工具，不另建执行器。
 
-shape/workload 可独立使用。进入需要 CANNBot 的生成或优化阶段时，按[CANNBot 执行适配](references/cannbot-execution.md)在实际执行环境解析源码：续办用原任务固定版本，显式指定路径时用该版本，新任务默认取官方 CANNBot 应用仓主线 `master`，并固定应用和技能子模块的 commit。源码与共享配置保持只读，任务工程写入获准工作目录。
+workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/优化需要完整 CANNBot 时，优先复用已知 checkout，缺少则询问是否安装或指定已有位置，选择安装后复用其原安装入口。拒绝安装时继续独立步骤并说明缺项。CANNBot 源码、脚本、模板与配置不修改，任务工程写入获准工作目录。
 
 生成和多轮优化消耗较多 token，启动说明中简短提示，建议常规代码模型和中等 effort；复杂设计/关键正确性再按项目规则局部提升。默认 Codex 直接使用实际工具；Claude 仅在明确选择时初始化，不能把 Claude Agent/Hook 当作 Codex 原生能力。记录实际模型/effort，未知项如实标明，不填历史默认值。
 
@@ -29,7 +29,7 @@ shape/workload 可独立使用。进入需要 CANNBot 的生成或优化阶段�
 
 默认直接生成可运行首版，保留必要的语义、精度、资源和同步设计审查。实现来源（复用 / 模板适配 / 新生成）与结构分别决定；生成统一走**直接AscendC**，不调用TileLang设计、编译、调优或转译。首版前不强制 C/V 拆分、独立 pack/softmax/crop、多kernel或固定中间GM布局；由支持域、目标平台与成本证据选择。实现结构属于可修订设计，不是外部合同的不可变项。C/V拆分不强制重写已有组件。
 
-通过[CANNBot 生成入口](references/cannbot-execution.md#生成入口)触发本任务版本的 `ops-direct-invoke`。传入冻结合同、已审 DESIGN、case、工作目录及现有授权，按该版本模板完成生成与验收，记录实际角色、派发与验证证据。
+生成入口为 CANNBot `plugins-official/ops-direct-invoke/AGENTS.md`。使用其真实角色与 `workflows/task-prompts.md` 对应模板，完成环境、DESIGN/PLAN、WALKTHROUGH、开发、审查、修复和验收。Codex原生角色可按项目模型/并发规则复用代理，记录角色兼任和独立性，不能把未实际执行的阶段记为通过。CANNBot源码与模板保持只读。
 
 新生成或改变主要数据通路时，先按[通用知识路由](references/tiling-reading-routes.md)组合算子家族与执行策略，读取相关正文后再形成设计；将相关条件、取舍和实现安排写入已有 DESIGN 的方案适用性表，随设计交给开发者；开发者实现前读取同一组相关正文，原走读核依据、原代码检视核实现，原验证按这些语义与边界核对冻结合同。完整复用且证据有效时沿用原设计。
 
@@ -59,7 +59,7 @@ shape/workload 可独立使用。进入需要 CANNBot 的生成或优化阶段�
 3. **外部合同冻结**：将接口、精度、全量正确性与10例性能集合、超大分类、计时、R/G身份、环境、预算和不可变项写入OPERATOR_CONTRACT；归档源码和输入哈希。新正式run自动强制固定10例与逐轮复盘；按合同传 `--optimization-seconds`（默认约定18000），用户预算优先；仅生成再加 `--stage-scope generation_only`。旧run不原地补写身份字段。仅选定 C/V 路线后冻结该修订的内部接口；不得把它预设为所有首版的约束。
 4. **直接生成首版（按需复用）**：由Codex负责，按[生成设计评审](references/generation-design-review.md)及[shape→tiling 短指南](references/shape-tiling.md)完成路线核查、操作粒度成本表和独立性能可行性评审，再将已核对的设计记录及检查回执随任务交给开发者；不强制首版前进行多路线性能搜索。通过 `ops-direct-invoke` 生成缺失AscendC部分；C/V分支另完成[选型与边界冻结](references/cv-serial.md)。向真实生成角色传入工作副本、合同、完整正确性集合、固定10例性能集合和父目标；首个全量正确版本立即冻结G，随后按同协议测量性能并核对原始日志/库身份。设计记录纳入工程归档；结构或操作粒度实质偏离已审设计时先回报design_issue并复审，已冻结G则作为O对原G优化。本阶段的合格实测证据供第5阶段直接验收，不为切换阶段重复测量。用户要求与直接生成比较时，按[生成对照](references/generation-comparison.md)建立隔离且同条件的两路；不将准备prompt称作已生成。
 5. **轻量验收与建立G**：轻量指先做一次完整的验收决策、不预先展开进化搜索，不减少全量精度、固定10例、预热/重复或源码/库身份检查。冻结首个全量正确版本，完成同协议 R/G 测量并记录 generation result；调用 CLI `decision` 读取已归档证据。`auto` 下达标交付 G，优化记 `NOT_NEEDED`；未达生成目标记录 `GENERATION_TARGET_UNMET` 并进入优化。没有正确性或有效性能证据时先修复/补测，不作达标推断。完整已有 AscendC 复用路线记 generation=SKIPPED_REUSED，验证不可跳过。新 C→V 组合需 C 独立、V 独立和组合验证；G 包括 C、V、边界、适配及统一 runner，不能用组件通过替代父任务通过。
-6. **按需进入进化**：仅在 `auto` 验收性能未达标，或用户明确选择 `full` 持续优化时，按所选Codex＋Claude协作或Codex独立模式，读取本 workflow 的[CANNBot 执行适配](references/cannbot-execution.md)，由其轻量/原生入口实际调用已解析的 CANNBot 进化插件；显式传父任务剩余预算（默认最多5轮/每轮5候选）、固定G、目标（默认1.5×）和正式计时协议，核实接收及真实候选执行证据。
+6. **按需进入进化**：仅在 `auto` 验收性能未达标，或用户明确选择 `full` 持续优化时，按所选Codex＋Claude协作或Codex独立模式，读取本 workflow 的[CANNBot 执行适配](references/cannbot-execution.md)，由其轻量/原生入口实际调用外部 `ops-perf-evolution`；显式传父任务剩余预算（默认最多5轮/每轮5候选）、固定G、目标（默认1.5×）和正式计时协议，核实接收及真实候选执行证据。
 
    新优化任务默认使用随技能安装的适配脚本和轻量路径：复用 `prepare optimization` 中 `baseline_acceptance` 指向的有效验收，只准备本轮候选；不为阶段切换重复构建/测量 G，也不预先铺开完整策略树、另一套 session/state/ledger 或 HTML。正式合同、G 身份、轮次与预算由父任务持续维护；用户选择的 `stage_scope=full` 只表示必须优化，不代表要求完整原生框架。恢复已有完整模式沿用原状态。lingxi 的正 engine_score 可低于 1，初始化、预约和反馈后的校验统一用本技能 `scripts/cannbot/world_model_adapter.py` 的显式 PyTorch 口径；原生校验结果单列，不能补 1 或改成相对 G。见[轻量交接](references/continuation.md#轻量优化交接)。
 7. **进化搜索**：持续推进授权内轮次；C/V优化完整组合并共享预算。每轮结束先分析**每个候选**的慢例/退化项、证据、原因或可证伪假设，再归档 `round-review`；下一轮SELECT/派发前执行 `round-check`。没有足够证据可记unknown，但必须给出具体区分实验和预期观察。每个下一轮变体须关联本轮证据、明确机制改动和反证条件，不能只有参数组合。全部失败也形成有证据的分析终态。详见[评测与逐轮分析](references/performance-and-round-review.md)。下游相对PyTorch的score单列，正式G/O只按冻结性能集合；冠军替换仍需全量精度和同条件性能。
@@ -67,7 +67,7 @@ shape/workload 可独立使用。进入需要 CANNBot 的生成或优化阶段�
 
 ## 资源、恢复和人参与
 
-远端先遵循项目环境池及预检；不得继承示例机器、容器或设备号。使用本任务的 CANNBot 与 benchmark。默认源码仅拉取到已获准的任务目录，SDK、系统依赖和共享配置按环境规则处理。占卡规则采用本任务最新授权，不能泛化历史任务的50%阈值。只在明确授权时创建定时监控。
+远端先遵循项目环境池及预检；不得继承示例机器、容器或设备号。复用指定现有 CANNBot/benchmark，不自动安装、改共享 skill 或重启容器。占卡规则采用本任务最新授权，不能泛化历史任务的50%阈值。只在明确授权时创建定时监控。
 
 固定父任务身份，所有候选独立源码/build/log，恢复先读合同、state与checkpoint，再核实活跃进程，避免重复派发。路线或接口修订保留已用预算和旧证据，按[恢复协议](references/protocol.md)更新归档。资源门禁只阻止受影响的设备阶段，等待时仍可继续允许的代码/CPU工作；按候选终态收口，不等待失败候选永远不会生成的性能文件。5轮是上限；不要因失败清空计数重来，也不自动延长。
 

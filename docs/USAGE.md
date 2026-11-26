@@ -21,7 +21,7 @@
 请从 https://github.com/grandolantow/operator-shape-derivation 的 main 为当前任务目录安装 ascend-op-workflow，用官方 install_codex.py 先预览再应用，检查安装清单和两个 CLI 入口，最后告诉我实际提交、安装路径和缺少的运行依赖，本次只做安装检查。
 ```
 
-可把“当前任务目录”换成绝对路径。进入生成或优化时，workflow 默认获取官方 CANNBot 主线，并固定该任务的版本。需要用现有版本时，在任务请求里写“使用执行环境中 CANNBot 的 <绝对路径>”。
+可把“当前任务目录”换成绝对路径。默认安装 CANNBot `master` 配套技能。要复用指定版本，在末尾加“用 `--cannbot-root` 指定 CANNBot <绝对路径>”。只做 shape 或需要离线安装时，加 `--workflow-only`。
 
 ### 自己运行安装脚本
 
@@ -46,7 +46,7 @@ python "$workflow\install_codex.py" --task-dir $task --apply
 Set-Location -LiteralPath $task
 Get-Content -LiteralPath .agents/ascend-op-workflow-install.json
 python -B .agents/skills/ascend-op-workflow/scripts/workflow.py --help
-python -B .agents/skills/ascend-op-workflow/scripts/cannbot/resolve_source.py --help
+python -B .agents/skills/ascend-op-workflow/scripts/cannbot/prepare_workspace.py --help
 ```
 
 **Linux Bash**
@@ -68,7 +68,7 @@ python3 "$workflow/install_codex.py" --task-dir "$task" --apply
 cd "$task"
 cat .agents/ascend-op-workflow-install.json
 python3 -B .agents/skills/ascend-op-workflow/scripts/workflow.py --help
-python3 -B .agents/skills/ascend-op-workflow/scripts/cannbot/resolve_source.py --help
+python3 -B .agents/skills/ascend-op-workflow/scripts/cannbot/prepare_workspace.py --help
 ```
 
 安装后从任务目录开新会话，请 agent 回报实际读取的 `ascend-op-workflow/SKILL.md` 路径。两个 `--help` 检查的是本地命令入口。生成和上板前，还要在实际执行环境核对 CANNBot、CANN、编译器、设备和 benchmark。已有 CANNBot 在目标容器内时，开工前提供容器里的实际路径。
