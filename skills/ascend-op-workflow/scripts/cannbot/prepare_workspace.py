@@ -19,6 +19,7 @@ import shutil
 
 DEFAULT_SKILLS = ("evolution-world-model", "evolution-strategies", "evolution-knowledge")
 SKILL_ROOT = Path(__file__).resolve().parents[2]
+EVOLUTION_PLUGIN = "plugins-community/ascendc-ops-perf-evolution/plugin-sources.json"
 
 
 def tree_hash(root):
@@ -37,13 +38,32 @@ def tree_hash(root):
     return result.hexdigest()
 
 
+def declared_sources(checkout, name):
+    declaration = checkout / EVOLUTION_PLUGIN
+    if not declaration.is_file():
+        return []
+    config = json.loads(declaration.read_text(encoding="utf-8"))
+    root = (checkout / config["skillsRepository"]).resolve()
+    sources = []
+    for relative in config["skills"]:
+        path = root / relative
+        if path.name in (name, f"ascendc-{name}"):
+            source = path.resolve()
+            if not source.is_relative_to(checkout) or not (source / "SKILL.md").is_file():
+                raise ValueError(f"Missing or invalid declared CANNBot resource: {path}")
+            sources.append(source)
+    return sources
+
+
 def skill_source(checkout, name):
     if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
         raise ValueError(f"Invalid skill name: {name}")
     roots = (checkout / "plugins-community/ops-perf-evolution/skills",
              checkout / "plugins-community/tilelang2ascendc-ops-generator/skills",
              checkout / "ops", checkout / "infra")
-    sources = [root / name for root in roots if (root / name / "SKILL.md").is_file()]
+    sources = declared_sources(checkout, name) or [
+        root / name for root in roots if (root / name / "SKILL.md").is_file()
+    ]
     if not sources:
         raise ValueError(f"Missing CANNBot resource: {name}")
     if len({tree_hash(path) for path in sources}) != 1:
@@ -76,10 +96,12 @@ def prepare(workspace, cannbot_root, skills=()):
     if record and record.get("cannbot_root") != str(checkout):
         raise ValueError("Workspace belongs to a different CANNBot checkout")
     resources = dict(record["resources"]) if record else {}
-    requested = {}
-    for name in dict.fromkeys((*DEFAULT_SKILLS, *skills)):
-        requested[f".claude/skills/{name}"] = skill_source(checkout, name)
-    for relative, source in requested.items():
+    requested = {
+        name: skill_source(checkout, name)
+        for name in dict.fromkeys((*DEFAULT_SKILLS, *skills))
+    }
+    for source in dict.fromkeys(requested.values()):
+        relative = f".claude/skills/{source.name}"
         identity = {"source": str(source), "sha256": tree_hash(source), "ready": False}
         if relative in resources:
             previous = resources[relative]
@@ -128,7 +150,8 @@ def prepare(workspace, cannbot_root, skills=()):
             staging.rename(target)
         entry["ready"] = True
         write_json(marker, record)
-    environment = {"PYTHONDONTWRITEBYTECODE": "1", "CANNBOT_SOURCE_ROOT": str(checkout),
+    wm_scripts = workspace / ".claude/skills" / requested["evolution-world-model"].name / "scripts"
+    environment = {"CANNBOT_WM_SCRIPTS": str(wm_scripts), "PYTHONDONTWRITEBYTECODE": "1", "CANNBOT_SOURCE_ROOT": str(checkout),
                    "CANNBOT_ROOT": str(workspace), "CANNBOT_SKILLS_DIR": str(workspace / ".claude/skills"),
                    "CLAUDE_PLUGIN_ROOT": str(workspace), "PROJECT_ROOT": str(workspace), "WORKDIR": str(workspace)}
     ps_quote = lambda value: "'" + value.replace("'", "''") + "'"

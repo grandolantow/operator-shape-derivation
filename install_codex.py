@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Install the Ascend operator workflow into one Codex task.
 
-[Role] Install task-local workflow/shape skills and optional CANNBot resources.
-[Invariants] CANNBot is an independent, read-only source; dry-run is the default.
-[Timeouts & Locks] No external commands or network; one installer per task.
-[Side-Effect Policy] --apply writes only task-local skills, routing and manifest.
+[Role] Install task-local workflow and CANNBot skills.
+[Invariants] Existing source checkouts are read-only; dry-run is the default.
+[Side-Effect Policy] --apply may clone the default CANNBot source into the task.
 """
 
 from __future__ import annotations
@@ -17,7 +16,9 @@ import os
 import re
 import shutil
 import stat
+import subprocess
 import sys
+from tempfile import TemporaryDirectory
 from pathlib import Path
 
 
@@ -27,6 +28,10 @@ GEN_AGENTS = {"ascendc-kernel-architect", "ascendc-kernel-design-reviewer",
 EVO = "ops-perf-evolution"
 MANIFEST = ".agents/ascend-op-workflow-install.json"
 PACKAGE = Path(__file__).resolve().parent
+CANNBOT_URL = "https://gitcode.com/cann/cannbot.git"
+CANNBOT_BRANCH = "master"
+CANNBOT_CHECKOUT = ".workflow-deps/cannbot"
+CANNBOT_VENDOR = "vendor/cannbot-skills"
 
 
 class InstallError(ValueError):
@@ -59,7 +64,19 @@ def digest(path: Path) -> str:
     return h.hexdigest()
 
 
+def filesystem_path(path: Path) -> Path:
+    if os.name != "nt":
+        return path
+    raw = str(path.absolute())
+    if raw.startswith("\\\\?\\"):
+        return path
+    if raw.startswith("\\\\"):
+        return Path("\\\\?\\UNC\\" + raw[2:])
+    return Path("\\\\?\\" + raw)
+
+
 def tree_digest(path: Path) -> str:
+    path = filesystem_path(path)
     if not path.is_dir():
         raise InstallError(f"Missing skill directory: {path}")
     h = hashlib.sha256()
@@ -140,12 +157,80 @@ def packaged_skills(result: dict, origins: dict, workflow: Path) -> None:
         origins.setdefault(source.name, []).append(f"packaged:{source}")
 
 
+def git(root: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", "-c", "core.longpaths=true", "-C", str(root), *args],
+        capture_output=True, encoding="utf-8",
+        errors="replace", env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+    )
+    if result.returncode:
+        raise InstallError(f"git {args[0]} failed: {result.stderr.strip()}")
+    return result.stdout.strip()
+
+
+def clone_cannbot(root: Path) -> None:
+    root.parent.mkdir(exist_ok=True)
+    with TemporaryDirectory(prefix="cannbot-", dir=root.parent) as temp:
+        staging = Path(temp) / "checkout"
+        git(root.parent, "clone", "--depth", "1", "--branch", CANNBOT_BRANCH,
+            "--single-branch", CANNBOT_URL, str(staging))
+        git(staging, "submodule", "update", "--init", "--", CANNBOT_VENDOR)
+        staging.rename(root)
+
+
+def application_skills(repo: Path, workflow: Path) -> tuple[dict[str, Path], dict]:
+    shared = repo / CANNBOT_VENDOR
+    if not (repo / ".git").exists() or not (shared / ".git").exists():
+        raise InstallError(f"CANNBot application and skills must be initialized Git checkouts: {repo}")
+    plugins = [repo / "plugins-official" / GEN]
+    evolution = repo / "plugins-community/ascendc-ops-perf-evolution"
+    if (evolution / "plugin-sources.json").is_file():
+        plugins.append(evolution)
+
+    result, origins, contracts = {}, {}, {}
+    for plugin in plugins:
+        declaration = plugin / "plugin-sources.json"
+        config = json.loads(declaration.read_text(encoding="utf-8"))
+        source_root = (repo / config["skillsRepository"]).resolve()
+        if not source_root.is_relative_to(repo):
+            raise InstallError(f"CANNBot skill source escapes the checkout: {source_root}")
+        for relative in config["skills"]:
+            source = (source_root / relative).resolve()
+            if source.name == "workflow-orchestrator" or source.name.startswith("gitcode-"):
+                continue
+            if not source.is_relative_to(repo) or not (source / "SKILL.md").is_file():
+                raise InstallError(f"Missing or invalid CANNBot skill: {source}")
+            if source.name in result and result[source.name] != source:
+                if tree_digest(result[source.name]) != tree_digest(source):
+                    raise InstallError(f"Cross-plugin skill collision: {source.name}")
+            result.setdefault(source.name, source)
+            origins.setdefault(source.name, []).append(f"{plugin.name}:{source}")
+        contracts[str(declaration.relative_to(repo))] = digest(declaration)
+
+    case_generator = shared / "ops/op-case-generator"
+    if (case_generator / "SKILL.md").is_file() and case_generator.name not in result:
+        result[case_generator.name] = case_generator
+        origins[case_generator.name] = [f"workflow:{case_generator}"]
+    packaged_skills(result, origins, workflow)
+    return result, {
+        "skill_origins": origins,
+        "vendor_contracts": contracts,
+        "vendor_agents": {},
+        "cannbot_revisions": {
+            "application": git(repo, "rev-parse", "HEAD"),
+            "skills": git(shared, "rev-parse", "HEAD"),
+        },
+    }
+
+
 def discover(repo: Path | None, workflow: Path) -> tuple[dict[str, Path], dict]:
     if repo is None:
         skills, origins = {}, {}
         packaged_skills(skills, origins, workflow)
         return skills, {"skill_origins": origins, "vendor_contracts": {}, "vendor_agents": {}}
     gen = repo / "plugins-official" / GEN
+    if (gen / "plugin-sources.json").is_file() and (repo / ".gitmodules").is_file():
+        return application_skills(repo, workflow)
     evo = repo / "plugins-community" / EVO
     shared = repo / "ops"
     for source in (gen / "init.sh", gen / "AGENTS.md", evo / "init.sh", evo / "AGENTS.md", workflow / "SKILL.md"):
@@ -200,8 +285,18 @@ def output_bytes(value: object) -> bytes:
     return (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
-def route_text(repo: Path | None) -> bytes:
-    if repo is None:
+def route_text(repo: Path | None, application: bool = False) -> bytes:
+    if repo is None or application:
+        dependency = (
+            "The CANNBot application and its companion skills are installed for this task. "
+            "The install manifest records their source and revisions. "
+            "For a task that requires the workflow's legacy direct-invoke or evolution role templates, "
+            "use an explicitly selected checkout that contains those templates. "
+            if application else
+            "Shape/workload preparation is available without CANNBot. When a stage needs CANNBot, "
+            "reuse the task's known checkout or ask whether to install it or select an existing one. "
+            "If installation is declined, continue independent steps and report the missing dependency. "
+        )
         return (
             "# Ascend operator workflow for Codex\n\n"
             "Start with `.agents/skills/ascend-op-workflow/SKILL.md`. For MindIE entry, read "
@@ -213,9 +308,7 @@ def route_text(repo: Path | None) -> bytes:
             "Deliver G when the target is met; enter optimization only when it is unmet, unless "
             "the user explicitly requests full scope. Do not preselect implementation structure; "
             "every optimization round needs causal analysis before further dispatch.\n\n"
-            "Shape/workload preparation is available without CANNBot. When a stage needs CANNBot, "
-            "reuse the task's known checkout or ask whether to install it or select an existing one. "
-            "If installation is declined, continue independent steps and report the missing dependency. "
+            + dependency +
             "Read original CANNBot instructions and use available tools; do not modify CANNBot, "
             "register Claude agents in Codex, or assume Claude hooks run. "
             "Use the bundled scripts/cannbot and references/cannbot-execution.md with "
@@ -287,7 +380,7 @@ def plan(repo: Path | None, task: Path, workflow: Path) -> tuple[dict, dict]:
         entries[f".agents/skills/{name}"] = {
             "kind": "tree", "source": str(source), "sha256": tree_digest(source)
         }
-    route = route_text(repo)
+    route = route_text(repo, application="cannbot_revisions" in metadata)
     entries["AGENTS.md"] = {"kind": "file", "source": None,
                             "sha256": hashlib.sha256(route).hexdigest(), "data": route}
     manifest = {"schema": 1, "repo_root": str(repo) if repo else None, "cannbot_root": str(repo) if repo else None,
@@ -337,8 +430,8 @@ def install(task: Path, entries: dict) -> None:
         target = task / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         if item["kind"] == "tree":
-            shutil.copytree(item["source"], target, symlinks=False,
-                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            shutil.copytree(filesystem_path(Path(item["source"])), filesystem_path(target),
+                            symlinks=False, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         else:
             target.write_bytes(item["data"])
     record = task / MANIFEST
@@ -348,8 +441,10 @@ def install(task: Path, entries: dict) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cannbot-root", "--repo-root", dest="cannbot_root",
-                        help="Optional existing CANNBot checkout; omit to install only workflow/shape")
+    source = parser.add_mutually_exclusive_group()
+    source.add_argument("--cannbot-root", "--repo-root", dest="cannbot_root",
+                        help="Use an existing checkout instead of fetching CANNBot master")
+    source.add_argument("--workflow-only", action="store_true", help="Install workflow and shape only")
     parser.add_argument("--task-dir", required=True)
     parser.add_argument("--workflow-skill", help="Defaults to this package's skills/ascend-op-workflow")
     parser.add_argument("--apply", action="store_true")
@@ -361,14 +456,40 @@ def main(argv: list[str] | None = None) -> int:
         task = raw_task.resolve(strict=True)
         workflow = (Path(args.workflow_skill) if args.workflow_skill else
                     PACKAGE / "skills/ascend-op-workflow")
+        default_source = repo is None and not args.workflow_only
+        checkout = task / CANNBOT_CHECKOUT
+        if default_source:
+            reject_reparse_chain(checkout)
+            if checkout.exists():
+                if not (checkout / ".git").exists():
+                    raise InstallError(f"Invalid CANNBot checkout: {checkout}")
+                repo = checkout
+            elif args.apply:
+                entries, manifest = plan(None, task, workflow)
+                check(task, entries, manifest)
+                if (task / MANIFEST).exists():
+                    raise InstallError("Existing workflow-only install; use --workflow-only to verify it")
+                clone_cannbot(checkout)
+                repo = checkout
+        if default_source and repo is not None:
+            if (git(repo, "config", "--get", "remote.origin.url") != CANNBOT_URL or
+                    git(repo, "rev-parse", "HEAD:" + CANNBOT_VENDOR) !=
+                    git(repo / CANNBOT_VENDOR, "rev-parse", "HEAD")):
+                raise InstallError(f"Unexpected CANNBot source in {repo}; use --cannbot-root to select a checkout")
         entries, manifest = plan(repo, task, workflow)
         installed = check(task, entries, manifest)
         if args.apply and not installed:
             install(task, entries)
             installed = True
-        print(json.dumps({"status": "installed" if installed else "dry-run",
-                          "task_dir": str(task), "skills": len(entries) - 2,
-                          "manifest": str(task / MANIFEST)}, ensure_ascii=False, sort_keys=True))
+        report = {"status": "installed" if installed else "dry-run",
+                  "task_dir": str(task), "skills": len(entries) - 2,
+                  "manifest": str(task / MANIFEST)}
+        if default_source:
+            report["cannbot"] = {"url": CANNBOT_URL, "branch": CANNBOT_BRANCH,
+                                 "path": str(checkout), **manifest.get("cannbot_revisions", {})}
+        elif manifest.get("cannbot_revisions"):
+            report["cannbot"] = {"path": str(repo), **manifest["cannbot_revisions"]}
+        print(json.dumps(report, ensure_ascii=False, sort_keys=True))
         return 0
     except (InstallError, OSError, json.JSONDecodeError) as exc:
         print(f"install_codex: {exc}", file=sys.stderr)

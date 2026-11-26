@@ -4,6 +4,8 @@ import importlib.util
 import contextlib
 import io
 import json
+import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -183,8 +185,8 @@ class InstallCodexTests(unittest.TestCase):
             self.assertEqual(installer.main(["--task-dir", str(self.task)]), 0)
         self.assertFalse((self.task / ".agents").exists())
         with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(installer.main(["--task-dir", str(self.task), "--apply"]), 0)
-            self.assertEqual(installer.main(["--task-dir", str(self.task), "--apply"]), 0)
+            self.assertEqual(installer.main(["--task-dir", str(self.task), "--workflow-only", "--apply"]), 0)
+            self.assertEqual(installer.main(["--task-dir", str(self.task), "--workflow-only", "--apply"]), 0)
         manifest = json.loads((self.task / installer.MANIFEST).read_text(encoding="utf-8"))
         self.assertIsNone(manifest["cannbot_root"])
         self.assertEqual(set(manifest["entries"]), {
@@ -193,6 +195,59 @@ class InstallCodexTests(unittest.TestCase):
                          (self.workflow / "SKILL.md").read_bytes())
         self.assertFalse((self.task / ".claude").exists())
         self.assertEqual(vendor_before, {p: p.read_bytes() for p in self.repo.rglob("*") if p.is_file()})
+
+    @unittest.skipUnless(shutil.which("git"), "Git is required")
+    def test_default_install_uses_master_and_reuses_checkout(self):
+        app = self.root / "app"
+        skills = self.root / "shared skills"
+        app.mkdir()
+        skills.mkdir()
+        env = {
+            "GIT_CONFIG_COUNT": "2",
+            "GIT_CONFIG_KEY_0": "protocol.file.allow",
+            "GIT_CONFIG_VALUE_0": "always",
+            "GIT_CONFIG_KEY_1": f"url.{app.as_uri()}.insteadOf",
+            "GIT_CONFIG_VALUE_1": installer.CANNBOT_URL,
+            "GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "test@example.com",
+            "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "test@example.com",
+        }
+        with patch.dict(os.environ, env), contextlib.redirect_stdout(io.StringIO()) as output:
+            args = ["--task-dir", str(self.task)]
+            self.assertEqual(installer.main(args), 0)
+            self.assertEqual(json.loads(output.getvalue())["cannbot"]["branch"], "master")
+            self.assertFalse((self.task / installer.CANNBOT_CHECKOUT).exists())
+
+            git = installer.git
+            git(skills, "init", "-b", "master")
+            self.write(skills / "ops/ascendc-docs-search/SKILL.md", "# Docs search")
+            git(skills, "add", ".")
+            git(skills, "commit", "-m", "skill")
+            skills_commit = git(skills, "rev-parse", "HEAD")
+
+            git(app, "init", "-b", "master")
+            git(app, "submodule", "add", "--", skills.as_uri(), installer.CANNBOT_VENDOR)
+            self.write(app / "plugins-official/ops-direct-invoke/plugin-sources.json", json.dumps({
+                "skillsRepository": ".",
+                "skills": ["vendor/cannbot-skills/ops/ascendc-docs-search"],
+            }))
+            git(app, "add", ".")
+            git(app, "commit", "-m", "baseline")
+            app_commit = git(app, "rev-parse", "HEAD")
+            self.write(skills / "next", "A newer skills commit")
+            git(skills, "add", ".")
+            git(skills, "commit", "-m", "newer skills")
+
+            self.assertEqual(installer.main([*args, "--apply"]), 0)
+            manifest = json.loads((self.task / installer.MANIFEST).read_text(encoding="utf-8"))
+            self.assertEqual(manifest["cannbot_revisions"], {
+                "application": app_commit, "skills": skills_commit,
+            })
+            self.assertTrue((self.task / ".agents/skills/ascendc-docs-search/SKILL.md").is_file())
+            self.write(app / "next", "A newer application commit")
+            git(app, "add", ".")
+            git(app, "commit", "-m", "newer application")
+            self.assertEqual(installer.main([*args, "--apply"]), 0)
+            self.assertEqual(git(self.task / installer.CANNBOT_CHECKOUT, "rev-parse", "HEAD"), app_commit)
 
     def test_legacy_repo_root_alias_uses_same_external_source(self):
         with contextlib.redirect_stdout(io.StringIO()):

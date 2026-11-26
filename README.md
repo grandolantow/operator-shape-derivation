@@ -30,7 +30,7 @@
 
 有两种安装方式：在 MindIE Agent 中复制[安装提示词](docs/INSTALL.md#让-mindie-agent-完成安装)，或在已有源码和任务目录时运行 Python 安装器。安装器需要 Python 3.10+；先预览，再加 `--apply` 写入任务级技能。Windows、Linux 的完整命令和 Claude 选配入口见[安装说明](docs/INSTALL.md)。
 
-默认安装不依赖 CANNBot；生成和优化依赖按[阶段依赖表](docs/INSTALL.md#按阶段准备依赖)核对。仅做 shape 推导可继续使用旧的根目录 SKILL.md，不要求 CANNBot 或 NPU。生成与优化消耗较多 token，建议常规代码模型和中等 effort，复杂问题再局部提升。
+默认安装配套准备 CANNBot 官方主线 `master` 的源码和技能，并记录实际版本。只需要 workflow 和 shape 时，可使用 `--workflow-only`。各阶段的运行依赖见[安装说明](docs/INSTALL.md#按阶段准备依赖)。仅做 shape 推导可继续使用旧的根目录 SKILL.md，不要求 CANNBot 或 NPU。生成与优化消耗较多 token，建议常规代码模型和中等 effort，复杂问题再局部提升。
 
 ### 执行入口
 

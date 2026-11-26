@@ -21,7 +21,7 @@
 请从 https://github.com/grandolantow/operator-shape-derivation 的 main 为当前任务目录安装 ascend-op-workflow，用官方 install_codex.py 先预览再应用，检查安装清单和两个 CLI 入口，最后告诉我实际提交、安装路径和缺少的运行依赖，本次只做安装检查。
 ```
 
-可把“当前任务目录”换成绝对路径。如果工具已知一份本机可读的完整 CANNBot checkout，在末尾加“CANNBot 在 <绝对路径>，通过 --cannbot-root 一起准备”。
+可把“当前任务目录”换成绝对路径。默认安装 CANNBot `master` 配套技能。要复用指定版本，在末尾加“用 `--cannbot-root` 指定 CANNBot <绝对路径>”。只做 shape 或需要离线安装时，加 `--workflow-only`。
 
 ### 自己运行安装脚本
 

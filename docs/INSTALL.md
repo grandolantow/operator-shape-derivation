@@ -1,12 +1,12 @@
 # 安装与使用
 
-默认使用 **MindIE Agent / Codex + 直接 AscendC + 轻量优化**。已有配套 Ascend 环境时，只需安装本仓技能并指定完整 CANNBot 路径；不需要再安装独立 adapter。可直接使用下方的[一键安装提示词](#让-mindie-agent-完成安装)。
+默认使用 **MindIE Agent / Codex + 直接 AscendC + 轻量优化**。默认安装本仓技能和[官方 CANNBot](https://gitcode.com/cann/cannbot) `master` 的配套技能。可直接使用下方的[一键安装提示词](#让-mindie-agent-完成安装)。
 
 ## 两个独立目录
 
-本仓可独立安装工作流与shape技能；外部CANNBot在生成/优化阶段提供执行参考、工具和公共依赖。需要时复用完整checkout，包含plugins-official/ops-direct-invoke、plugins-community/ops-perf-evolution及其依赖。只复制SKILL.md不足以运行生成/优化。CANNBot源码与已有配置保持不动。
+应用安装时，安装器将 CANNBot `master` 拉到任务目录的 `.workflow-deps/cannbot`，按应用提交初始化 `vendor/cannbot-skills`，复制工作流所需的 CANNBot 技能。应用与技能提交记录在安装清单里，再次运行复用原检出。
 
-参数`--cannbot-root`可选：提供时安装外部checkout中生成/优化入口及角色声明的技能，排除 GitCode 仓库协作技能；省略时只安装本仓workflow/shape，生成或优化需要时再由Skill询问安装或指定已有位置。旧`--repo-root`是同义兼容参数；二者都不表示本仓。工作流与shape从安装器所在仓库的skills读取，不从CANNBot/tools取。`--workflow-skill`可覆盖主技能入口，shape仍来自本仓。
+使用 `--cannbot-root PATH` 可以选择已有 checkout，旧参数 `--repo-root` 仍可用。只做 shape 或离线安装时用 `--workflow-only`。默认 `master` 的直调入口和轻量优化资源见 [CANNBot 执行适配](../skills/ascend-op-workflow/references/cannbot-execution.md)。沿用旧角色模板时指定原 checkout。
 
 ## 按阶段准备依赖
 
@@ -14,9 +14,9 @@
 
 | 使用范围 | 必要依赖 | 安装或检查方式 |
 | --- | --- | --- |
-| 安装 workflow | Python 3.10+、本仓完整源码；克隆时需要 Git 和仓库访问权限 | `install_codex.py` 仅用标准库；已有源码不要求联网 |
+| 安装 workflow | Python 3.10+、本仓完整源码；默认安装还需 Git 和 GitCode 访问权限 | 使用已有完整 checkout 或仅装 workflow 时可离线应用 |
 | 读取技能、shape 静态推导 | 能发现任务级技能的 MindIE Agent / Codex；输入源码、配置 | 在任务目录打开新会话，确认读取 `ascend-op-workflow/SKILL.md` |
-| 生成与优化参考 | 完整、可读的 CANNBot checkout | 核对 `plugins-official/ops-direct-invoke/`、`plugins-community/ops-perf-evolution/` 及其引用的 `ops/`、`infra/`；只复制 SKILL.md 不够 |
+| 生成与优化参考 | 完整、可读的 CANNBot checkout | 新版直调核对原生启动器、harness、实际可用的 Agent CLI 和项目配置；轻量优化核对 `ascendc-ops-perf-evolution/plugin-sources.json` 及其 skills |
 | 直接 AscendC 工程 | Linux、Bash、所选模板要求的 CMake/构建工具与 C++ 工具链；配套 CANN Toolkit 的 AscendC 编译器、头文件和库 | 读取该版本生成入口、模板与环境检查；核对实际芯片、SoC 和编译目标 |
 | API 文档与开发模板 | 生成流程所用 asc-devkit 文档、示例及 CMake 资源 | 优先复用已有 SDK，按所选版本说明设置 `ASC_DEVKIT_DIR`；它不是 workflow 安装器自动下载的内容 |
 | 上板运行 | 可用 Ascend NPU、配套驱动/运行时、设备访问权限 | 在实际执行容器核对 `npu-smi info`、CANN 环境及获准设备；不在 Windows 宿主安装 NPU 软件 |
@@ -29,7 +29,7 @@
 
 例如，所选 CANNBot evaluator 若引用 `AscendPerformanceTest.py` 或 `ascendc-evaluation/scripts/evaluate.py`，须核对这些资源真实可读且可导入；缺失时按该版本说明补齐，不推测它们对应同名 PyPI 包。直接 AscendC 工程可以使用合同指定的正式 verifier，不为安装 workflow 补齐所有评测分支。具体入口见[执行适配的依赖边界](../skills/ascend-op-workflow/references/cannbot-execution.md#依赖边界)。
 
-以下内容**不是默认依赖**：Claude / Node / Claude Hook、TileLang 设计转译工具链、独立 `cannbot-codex` 包、HTML 报告依赖。Claude 协作、PMU、仿真或 HTML 仅在实际选择时准备。安装器和本仓适配脚本不依赖 PyYAML；外部脚本是否需要它按所选入口检查。
+安装器和本仓适配脚本使用 Python 标准库。进入新版直调后，按对应版本的 CANNBot quickstart 检查原生启动器、Python 依赖和所选 Agent CLI。Claude 协作、PMU、仿真或 HTML 按实际选择准备。
 
 ## 让 MindIE Agent 完成安装
 
@@ -50,13 +50,9 @@
    安装完整技能和内置适配脚本，不只复制 SKILL.md。若已有 AGENTS.md 或
    托管文件冲突，保留原内容并报告具体冲突；可保留原配置，明确引用
    源码中的 skills/ascend-op-workflow/SKILL.md，但不能把它报成复制安装成功。
-3. 从任务合同、安装清单或我提供的位置复用完整 CANNBot、benchmark、SDK。
-   用于生成/优化且已知 CANNBot 路径时，第 2 步优先带 --cannbot-root 一起
-   安装生成/优化依赖（不安装 GitCode 仓库协作技能）；仅做 shape 或尚无
-   路径时先完成本仓安装。
-   缺少 CANNBot 时一次性询问已有路径，或其源码地址与获准安装位置；
-   未提供则先完成 workflow 安装，列出生成/优化缺项，不猜测私有仓库地址。
-   CANNBot 源码保持只读，必需的可写资源放到任务工作目录。
+3. 应用安装时沿用安装器的默认 CANNBot master。若我提供了 CANNBot checkout，
+   用 --cannbot-root 指定。若本次只做 shape 或明确要求离线安装，用
+   --workflow-only。benchmark 和 SDK 复用任务已有的配套环境。
 4. 复制安装时检查 manifest、技能及 scripts/cannbot 的文件哈希，运行已安装
    workflow.py --help 和 prepare_workspace.py --help，验证入口可用；采用明确
    引用方式时核对源码中的完整技能，并从该源码目录运行相同入口检查。
@@ -83,15 +79,15 @@
 python3 /path/to/workflow/install_codex.py --task-dir /path/to/task --apply
 ```
 
-去掉 `--apply` 为只读预览。安装器不创建任务根目录，不下载依赖、不执行插件 init、不启动 Agent 或设备作业；它复制完整任务级 `.agents/skills/`，写入 `AGENTS.md` 路由及 `.agents/ascend-op-workflow-install.json`。再次以同参数运行会检查已安装内容与清单一致；**没有 `--update` 或强制覆盖选项**。
+去掉 `--apply` 为只读预览，首次预览会显示计划的 CANNBot 分支和路径。应用后，技能复制到任务级 `.agents/skills/`，版本与文件来源写入 `.agents/ascend-op-workflow-install.json`。安装阶段只准备 CANNBot 源码和技能。再次以同参数运行会检查已安装内容与清单一致；**没有 `--update` 或强制覆盖选项**。
 
-生成/优化且已有完整 CANNBot checkout 时，优先一起安装对应依赖技能：
+需要选择已有 CANNBot checkout 时：
 
 ```bash
 python3 /path/to/workflow/install_codex.py --task-dir /path/to/task --cannbot-root /path/to/cannbot --apply
 ```
 
-`--cannbot-root` 安装该版本生成/优化入口及角色声明的技能快照，Codex 和 Claude 安装器均排除 `gitcode-*`（PR、Issue、仓库工具），并记录实际安装来源与哈希。其余生成、精度、调试、评测、profiling 和进化依赖保留；报告等技能资源仍可供对应阶段使用，复制技能不会自动安装 HTML/PMU 等可选运行依赖。它不下载 CANNBot，也不把完整编译环境装进任务目录。没有 checkout 时先提供源码地址和获准安装位置；已有完整源码可以直接复用，不必重复克隆。只装本仓技能适合 shape 或暂缺依赖的阶段，不能把它报成生成/优化依赖安装齐全。已安装旧版本的任务不能直接覆盖 manifest；使用新任务安装目录，保留原任务内容。
+已有完整源码可以复用。旧版 checkout 会沿用原有的技能快照安装逻辑。使用新版应用仓时，先初始化它的 `vendor/cannbot-skills`。已安装的任务沿用原安装清单和对应参数。
 
 ## Windows Codex
 
@@ -103,9 +99,9 @@ python "$workflow\install_codex.py" --task-dir $task
 python "$workflow\install_codex.py" --task-dir $task --apply
 ```
 
-也可运行根目录install-codex.ps1，使用-CannbotRoot（兼容-RepoRoot）。安装器复制任务级.agents/skills、写AGENTS.md路由及manifest，不需要Windows链接权限。打开任务目录新会话，确认ascend-op-workflow可发现。Codex把Claude角色文档作为参考，使用实际可用工具/子agent，不伪造Claude原生hook已运行。
+也可运行根目录 `install-codex.ps1`，对应参数为 `-CannbotRoot`（兼容 `-RepoRoot`）和 `-WorkflowOnly`。安装器复制任务级.agents/skills、写AGENTS.md路由及manifest，不需要Windows链接权限。打开任务目录新会话，确认ascend-op-workflow可发现。Codex把Claude角色文档作为参考，使用实际可用工具/子agent，不伪造Claude原生hook已运行。
 
-Linux Codex 同样运行 `python3 "$workflow/install_codex.py" --task-dir "$task" --apply`，不需要 Claude 或 Node。已有任务配置不覆盖；如有 AGENTS.md 冲突，可保留原文件，在其中引用本仓技能入口。运行时缺少 CANNBot 则先询问；选择安装后复用该版本原安装入口，拒绝时继续 shape/workload，明确生成/优化尚不可执行。无需为运行时指定 CANNBot 重新覆盖安装 manifest。
+Linux Codex 同样运行 `python3 "$workflow/install_codex.py" --task-dir "$task" --apply`，不需要 Claude 或 Node。已有任务配置不覆盖；如有 AGENTS.md 冲突，可保留原文件，在其中引用本仓技能入口。Claude 原生选配入口继续使用显式 checkout 参数。
 
 MindIE 入口、默认 Codex 的真实生成/进化和作业关联见 [MindIE 接入参考](../skills/ascend-op-workflow/references/mindie.md)。执行前提示 token 成本较大，建议常规代码模型和中等 effort；Claude 仅在明确选择后配置。
 
