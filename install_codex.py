@@ -214,12 +214,11 @@ def route_text(repo: Path | None) -> bytes:
             "the user explicitly requests full scope. Do not preselect implementation structure; "
             "every optimization round needs causal analysis before further dispatch.\n\n"
             "Shape/workload preparation is available without CANNBot. When a stage needs CANNBot, "
-            "reuse the task's known checkout or ask whether to install it or select an existing one. "
-            "If installation is declined, continue independent steps and report the missing dependency. "
+            "use references/cannbot-execution.md to resolve the pinned or explicitly selected checkout, "
+            "or to fetch the upstream CANNBot master baseline for a new task. "
             "Read original CANNBot instructions and use available tools; do not modify CANNBot, "
             "register Claude agents in Codex, or assume Claude hooks run. "
-            "Use the bundled scripts/cannbot and references/cannbot-execution.md with "
-            "the selected external checkout; no separate local adapter package is required.\n"
+            "The scripts/cannbot helpers are bundled with the workflow.\n"
         ).encode("utf-8")
     gen = repo / "plugins-official" / GEN / "AGENTS.md"
     evo = repo / "plugins-community" / EVO / "AGENTS.md"
@@ -281,13 +280,17 @@ def plan(repo: Path | None, task: Path, workflow: Path) -> tuple[dict, dict]:
     workflow = workflow.resolve(strict=True)
     if not task.is_dir():
         raise InstallError(f"Task directory is not a directory: {task}")
-    skills, metadata = discover(repo, workflow)
+    # The split application layout is resolved at execution time. Keep the
+    # legacy snapshot installer for checkouts with the old plugin layout.
+    app_entry = f"plugins-official/{GEN}/skills/{GEN}/SKILL.md"
+    legacy_repo = repo if repo and not (repo / app_entry).is_file() else None
+    skills, metadata = discover(legacy_repo, workflow)
     entries = {}
     for name, source in sorted(skills.items()):
         entries[f".agents/skills/{name}"] = {
             "kind": "tree", "source": str(source), "sha256": tree_digest(source)
         }
-    route = route_text(repo)
+    route = route_text(legacy_repo)
     entries["AGENTS.md"] = {"kind": "file", "source": None,
                             "sha256": hashlib.sha256(route).hexdigest(), "data": route}
     manifest = {"schema": 1, "repo_root": str(repo) if repo else None, "cannbot_root": str(repo) if repo else None,

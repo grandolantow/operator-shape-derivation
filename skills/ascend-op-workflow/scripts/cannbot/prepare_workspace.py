@@ -43,7 +43,10 @@ def skill_source(checkout, name):
     roots = (checkout / "plugins-community/ops-perf-evolution/skills",
              checkout / "plugins-community/tilelang2ascendc-ops-generator/skills",
              checkout / "ops", checkout / "infra")
-    sources = [root / name for root in roots if (root / name / "SKILL.md").is_file()]
+    community = checkout / "community/ops"
+    upstream_name = f"ascendc-{name}" if name in (*DEFAULT_SKILLS, "evolution-report", "ops-evaluation") else name
+    candidates = [root / name for root in roots] + [community / upstream_name]
+    sources = [path for path in candidates if (path / "SKILL.md").is_file()]
     if not sources:
         raise ValueError(f"Missing CANNBot resource: {name}")
     if len({tree_hash(path) for path in sources}) != 1:
@@ -78,7 +81,8 @@ def prepare(workspace, cannbot_root, skills=()):
     resources = dict(record["resources"]) if record else {}
     requested = {}
     for name in dict.fromkeys((*DEFAULT_SKILLS, *skills)):
-        requested[f".claude/skills/{name}"] = skill_source(checkout, name)
+        source = skill_source(checkout, name)
+        requested[f".claude/skills/{source.name}"] = source
     for relative, source in requested.items():
         identity = {"source": str(source), "sha256": tree_hash(source), "ready": False}
         if relative in resources:
@@ -131,6 +135,8 @@ def prepare(workspace, cannbot_root, skills=()):
     environment = {"PYTHONDONTWRITEBYTECODE": "1", "CANNBOT_SOURCE_ROOT": str(checkout),
                    "CANNBOT_ROOT": str(workspace), "CANNBOT_SKILLS_DIR": str(workspace / ".claude/skills"),
                    "CLAUDE_PLUGIN_ROOT": str(workspace), "PROJECT_ROOT": str(workspace), "WORKDIR": str(workspace)}
+    world_model = skill_source(checkout, DEFAULT_SKILLS[0])
+    environment["CANNBOT_WM_SCRIPTS"] = str(workspace / ".claude/skills" / world_model.name / "scripts")
     ps_quote = lambda value: "'" + value.replace("'", "''") + "'"
     (control / "env.sh").write_text(
         "\n".join(f"export {key}={shlex.quote(value)}" for key, value in environment.items()) + "\n",

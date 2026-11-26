@@ -30,7 +30,7 @@
 
 有两种安装方式：在 MindIE Agent 中复制[安装提示词](docs/INSTALL.md#让-mindie-agent-完成安装)，或在已有源码和任务目录时运行 Python 安装器。安装器需要 Python 3.10+；先预览，再加 `--apply` 写入任务级技能。Windows、Linux 的完整命令和 Claude 选配入口见[安装说明](docs/INSTALL.md)。
 
-默认安装不依赖 CANNBot；生成和优化依赖按[阶段依赖表](docs/INSTALL.md#按阶段准备依赖)核对。仅做 shape 推导可继续使用旧的根目录 SKILL.md，不要求 CANNBot 或 NPU。生成与优化消耗较多 token，建议常规代码模型和中等 effort，复杂问题再局部提升。
+默认安装仅准备 workflow 和 shape 技能。进入生成或优化时，workflow 按需拉取官方 CANNBot 主线 `master`，并固定该任务的应用与技能版本。生成和优化的环境依赖见[阶段依赖表](docs/INSTALL.md#按阶段准备依赖)。仅做 shape 推导可继续使用旧的根目录 SKILL.md，不要求 CANNBot 或 NPU。生成与优化消耗较多 token，建议常规代码模型和中等 effort，复杂问题再局部提升。
 
 ### 执行入口
 
@@ -38,7 +38,7 @@
 - [MindIE 接入与远端作业关联](skills/ascend-op-workflow/references/mindie.md) · [CANNBot 执行适配](skills/ascend-op-workflow/references/cannbot-execution.md)
 - [旧入口兼容与迁移](docs/MIGRATION.md) · [来源与依赖](SOURCES.md)
 
-默认由 Codex 执行，Claude 协作为选配。执行适配脚本随技能安装，使用显式指定的 CANNBot checkout。安装技能本身只准备任务级文件。
+默认由 Codex 执行，Claude 协作为选配。执行适配脚本随技能安装，可显式指定其他 CANNBot checkout。安装技能本身只准备任务级文件。
 
 ## 验证
 
@@ -48,6 +48,6 @@ python -m unittest discover -s skills/operator-shape-derivation/tests -v
 python -m unittest discover -s skills/ascend-op-workflow/scripts -p 'test_*.py' -v
 ```
 
-适配器的 29 项外部集成测试默认在未指定 CANNBot 时跳过。运行根测试前设置 `CANNBOT_SOURCE_ROOT` 为完整只读 checkout（Bash：`export CANNBOT_SOURCE_ROOT=/path/to/cannbot-skills`；PowerShell：`$env:CANNBOT_SOURCE_ROOT='C:\work\cannbot-skills'`），即可启用真实原生校验、select/refine 和门禁控制逻辑检查；测试中的候选结果为 fixture，不调用 NPU。
+适配器的 29 项外部集成测试默认在未指定 CANNBot 时跳过。运行根测试前设置 `CANNBOT_SOURCE_ROOT` 为包含旧版 translator 门禁的完整只读 checkout（Bash：`export CANNBOT_SOURCE_ROOT=/path/to/cannbot-skills`；PowerShell：`$env:CANNBOT_SOURCE_ROOT='C:\work\cannbot-skills'`），即可启用真实原生校验、select/refine 和门禁控制逻辑检查；测试中的候选结果为 fixture，不调用 NPU。
 
 测试结果与执行边界见 [VALIDATION.md](VALIDATION.md)。本仓目录名称不参与默认路径推导；可放在任意路径。远端改名状态见迁移说明，不假定尚未完成的改名已生效。
