@@ -9,7 +9,7 @@ description: 将 AscendC、Triton 算子或 PyTorch 小算子组合串成可恢�
 
 从 `/mindie-agent` 或 `$mindie-agent` 发起算子开发时，读取 [MindIE 接入与执行关联](references/mindie.md)，沿用当前宿主工具，不另建执行器。
 
-workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/优化需要完整 CANNBot 时，优先复用已知 checkout，缺少则询问是否安装或指定已有位置，选择安装后复用其原安装入口。拒绝安装时继续独立步骤并说明缺项。CANNBot 源码、脚本、模板与配置不修改，任务工程写入获准工作目录。
+workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成和优化沿用任务合同或安装清单固定的 CANNBot checkout。缺少时优先复用用户指定的版本，再按需准备依赖。CANNBot 源码和模板保持只读，任务工程写入获准目录。
 
 生成和多轮优化消耗较多 token，启动说明中简短提示，建议常规代码模型和中等 effort；复杂设计/关键正确性再按项目规则局部提升。默认 Codex 直接使用实际工具；Claude 仅在明确选择时初始化，不能把 Claude Agent/Hook 当作 Codex 原生能力。记录实际模型/effort，未知项如实标明，不填历史默认值。
 
@@ -29,7 +29,7 @@ workflow 和 CANNBot 是独立仓库。shape/workload 可独立使用；生成/�
 
 默认直接生成可运行首版，保留必要的语义、精度、资源和同步设计审查。实现来源（复用 / 模板适配 / 新生成）与结构分别决定；生成统一走**直接AscendC**，不调用TileLang设计、编译、调优或转译。首版前不强制 C/V 拆分、独立 pack/softmax/crop、多kernel或固定中间GM布局；由支持域、目标平台与成本证据选择。实现结构属于可修订设计，不是外部合同的不可变项。C/V拆分不强制重写已有组件。
 
-生成入口为 CANNBot `plugins-official/ops-direct-invoke/AGENTS.md`。使用其真实角色与 `workflows/task-prompts.md` 对应模板，完成环境、DESIGN/PLAN、WALKTHROUGH、开发、审查、修复和验收。Codex原生角色可按项目模型/并发规则复用代理，记录角色兼任和独立性，不能把未实际执行的阶段记为通过。CANNBot源码与模板保持只读。
+通过 [CANNBot 执行适配](references/cannbot-execution.md#阶段-4-直接生成)进入直接 AscendC 生成。新版应用仓使用 `ops-direct-invoke` 的原生启动器，旧版 checkout 沿用原角色模板。父 workflow 审定设计，交接算子契约和用例，并以正式验收确定 G。记录实际派发与完成的节点。
 
 新生成或改变主要数据通路时，先按[通用知识路由](references/tiling-reading-routes.md)组合算子家族与执行策略，读取相关正文后再形成设计；将相关条件、取舍和实现安排写入已有 DESIGN 的方案适用性表，随设计交给开发者；开发者实现前读取同一组相关正文，原走读核依据、原代码检视核实现，原验证按这些语义与边界核对冻结合同。完整复用且证据有效时沿用原设计。
 

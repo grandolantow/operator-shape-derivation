@@ -8,13 +8,13 @@
 
 只准备本轮搜索宽度内有证据支持的候选，记录机制、父实现、预期受益 case 和反证。按需检索策略，不要求额外凑齐固定数量的策略/开放/workflow 方向。若使用原生 SELECT，节点模式须符合实际选择配额；返回的 `free_N` 是占位项，不能预约或派发。可由协调者直接选择已经持久化的合法候选，写出同样的 `selections.json` 数组（`parallel_index`、`node_id`）；不必为满足 SELECT 配额增加无关候选。
 
-使用现有工具的实际绝对路径。只读调用已知 CANNBot 脚本时无需另复制整套 runtime；需要写策略/知识或工具相对目录依赖时，才用 `prepare_workspace.py` 建立任务副本。原生 Python 调用使用 `-B`，不在只读源码目录创建缓存。
+使用现有工具的实际绝对路径。只读调用已知 CANNBot 脚本时无需另复制整套 runtime；需要写策略/知识或工具相对目录依赖时，才用 `prepare_workspace.py` 建立任务副本。新版 checkout 的策略、知识和评测资源以 `ascendc-ops-perf-evolution/plugin-sources.json` 为准。原生 Python 调用使用 `-B`，不在只读源码目录创建缓存。
 
 在 run 中维护最小 `world_model.json`：沿用原 schema，root completed、score 为真实 G 分数、best_score 为真实当前最佳，待测节点 open/score:null。保留唯一 session 身份、evo_dir、op_name、requested_rounds/actual_rounds_completed；父任务可提供身份与轮次，不必运行会清零历史的原生 session init。没有父任务时在 run 的恢复记录中保存同等身份、冻结清单和累计预算。世界模型结构校验不证明分数来源，测量与全量门禁仍由协调者核查。
 
 ## 校验、预约与候选执行
 
-下面 `ADAPTER` 指本 workflow 的 scripts/cannbot 目录，`WM` 指已核实版本的 CANNBot evolution-world-model/scripts。lingxi 明确用 pytorch；ops 或未知分母用 native，不做该兼容。
+下面 `ADAPTER` 指本 workflow 的 scripts/cannbot 目录，`WM` 指所选 checkout 的 world-model `scripts`；使用准备脚本时取 `CANNBOT_WM_SCRIPTS`。lingxi 明确用 pytorch；ops 或未知分母用 native，不做该兼容。
 
 ```bash
 python3 -B "$ADAPTER/world_model_adapter.py" --wm-scripts "$WM" --path "$EVO_DIR/world_model.json" --score-base pytorch

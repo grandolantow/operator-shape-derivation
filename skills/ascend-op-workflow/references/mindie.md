@@ -6,7 +6,7 @@
 
 首次安装或迁移到新环境，使用仓库[安装说明](../../../docs/INSTALL.md)中的分阶段依赖表和一键安装提示词；说明位于源码仓，任务级技能副本可从安装 manifest 的 `workflow_repo_root` 定位。只读环境检查与 workflow 安装不等于真实生成/优化验收。
 
-将独立 workflow 仓的技能安装到任务工作区，并在该工作区打开新会话。默认安装只需 Python：
+将独立 workflow 仓的技能安装到任务工作区，并在该工作区打开新会话。默认配套安装 CANNBot `master`，需 Python、Git 和 GitCode 访问权限：
 
 ```bash
 python /path/to/workflow/install_codex.py --task-dir /path/to/task --apply
@@ -16,16 +16,16 @@ python /path/to/workflow/install_codex.py --task-dir /path/to/task --apply
 
 生成/优化需要 CANNBot 时，先查本任务合同、安装 manifest 或已指定路径。已有可用 checkout 就复用；缺少时询问“是否安装 CANNBot，或指定已有仓库？”用户选择安装后，读取该版本安装说明并复用原入口，限定安装位置；拒绝则继续 shape/workload，不尝试启动依赖缺失的阶段。与原环境匹配的编译/benchmark 依赖按需检查，不重装整套环境。
 
-若本地和远端分别持有 checkout，分别记录实际根与版本；默认 Codex 只读其资源，不要求 Claude/Node。`install_codex.py --cannbot-root PATH` 可在新任务安装时额外复制该版本声明的技能作为快照；不是运行时必需操作，也不修改 CANNBot。完整源码仍须在实际执行环境可读。
+若本地和远端分别持有 checkout，分别记录实际根与版本。已有版本可用 `--cannbot-root PATH` 指定。运行依赖见 [CANNBot 执行适配](cannbot-execution.md)。
 
 启动时提示：生成与多轮优化的 token 消耗较大，默认 Codex，建议常规代码模型和中等 effort；Claude 可选。已有执行授权直接推进，不为每个候选重复询问。
 
 ## 从准备到真实执行
 
 1. **输入与 workload**：按主 Skill 推导 shape，准备 definition/reference/inputs/workload，使用实际 benchmark schema/loader 检查。冻结完整 case、oracle、R、计时协议、写范围和预算。通过原 `workflow.py init/prepare generation` 记录父任务与 preparation。
-2. **Codex 生成**：读取 CANNBot 的 `plugins-official/ops-direct-invoke/AGENTS.md`、四个 `agents/ascendc-kernel-*.md` 及 `workflows/task-prompts.md`。按原始模板实施环境、设计、设计审核、开发、代码审核、修复、全量验证和报告步骤；使用原生子 agent 承接角色，记录角色复用和审核独立性。所有新实现直接生成 AscendC，不进入 TileLang 设计/转译。Claude 专属语法由实际 Codex 工具承接；模板和 SDK 来源保持只读，不能以读取入口替代实际分阶段执行。
+2. **Codex 生成**：按[阶段 4 直接生成](cannbot-execution.md#阶段-4-直接生成)使用实际 checkout 的入口，将已评审设计和冻结合同交给生成流程。记录节点启动、开发和验收的实际进度。
 3. **冻结 G**：真实生成和完整验证完成后，用 `freeze/result generation` 归档 G 与原始证据。G 全量正确且正式性能有效即可交接；生成目标未达记录 TARGET_UNMET，不伪造通过，也不阻止已授权优化。已有匹配 AscendC 时按原复用合同跳过生成。
-4. **Codex 优化**：用固定 G 创建 `prepare optimization`；先读本 workflow 的[CANNBot 执行适配](cannbot-execution.md)，默认走轻量入口，显式 native 或已有原生 state/anchor 才沿用完整模式。读取外部 CANNBot 的 `agents/lingxi-evo.md` 或 `agents/ops-evo.md` 及相应 partial 作为角色参考；使用该 checkout 的真实世界模型/评测脚本，以及随本 workflow 安装的评分兼容、预约和适用的全量守卫。策略选择、候选执行、评测回树均须真实发生。Claude 专属语法由当前宿主真实工具承接，不启动 Claude 以满足角色名，也不另写搜索状态机。
+4. **Codex 优化**：用固定 G 创建 `prepare optimization`；先读本 workflow 的[CANNBot 执行适配](cannbot-execution.md)，默认走轻量入口，显式 native 或已有原生 state/anchor 才沿用完整模式。轻量模式按该 checkout 的资源声明、实际策略和评测说明执行；旧版完整模式沿用原角色。使用随本 workflow 安装的评分兼容、预约和适用的全量守卫。策略选择、候选执行、评测回树均须真实发生。Claude 专属语法由当前宿主真实工具承接，不启动 Claude 以满足角色名，也不另写搜索状态机。
 5. **回收**：按合同完整复测最终 O，使用原评测器生成同条件 G/O 证据，`freeze/result optimization/verify` 收尾。原内部 score 的分母若是 PyTorch，保留其含义；正式优化目标仍是固定 G/O。精度、有效性能、目标达成分别报告，预算结束可交付 TARGET_UNMET。
 
 必要适配由本 workflow 的 `scripts/cannbot/` 和执行参考统一维护并随技能安装；不依赖原开发机的 `tools/cannbot-codex`、vendor 或私有 source manifest。执行环境须能读取已安装 workflow 和指定 CANNBot checkout，本地/远端各自解析路径并记录版本。不得修改 CANNBot 的脚本、模板、Skill/Agent/Hook、已有脏文件或其中的 workflow 副本。若现有接口不能支撑步骤，报告具体限制。例如需要保留 profile 时，已知 quick shell 包装未透传 `--keep-prof`，可直接调用原 `msprof_perf_summary.py` 的对应 Python 入口，不修共享包装器、不复制评测器。

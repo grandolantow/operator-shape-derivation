@@ -6,7 +6,7 @@
 
 应用安装时，安装器将 CANNBot `master` 拉到任务目录的 `.workflow-deps/cannbot`，按应用提交初始化 `vendor/cannbot-skills`，复制工作流所需的 CANNBot 技能。应用与技能提交记录在安装清单里，再次运行复用原检出。
 
-使用 `--cannbot-root PATH` 可以选择已有 checkout，旧参数 `--repo-root` 仍可用。只做 shape 或离线安装时用 `--workflow-only`。配套安装与任务派发是两个入口，仍依赖旧版直调或进化角色模板的任务需要显式指定含有这些模板的 checkout。
+使用 `--cannbot-root PATH` 可以选择已有 checkout，旧参数 `--repo-root` 仍可用。只做 shape 或离线安装时用 `--workflow-only`。默认 `master` 的直调入口和轻量优化资源见 [CANNBot 执行适配](../skills/ascend-op-workflow/references/cannbot-execution.md)。沿用旧角色模板时指定原 checkout。
 
 ## 按阶段准备依赖
 
@@ -16,7 +16,7 @@
 | --- | --- | --- |
 | 安装 workflow | Python 3.10+、本仓完整源码；默认安装还需 Git 和 GitCode 访问权限 | 使用已有完整 checkout 或仅装 workflow 时可离线应用 |
 | 读取技能、shape 静态推导 | 能发现任务级技能的 MindIE Agent / Codex；输入源码、配置 | 在任务目录打开新会话，确认读取 `ascend-op-workflow/SKILL.md` |
-| 生成与优化参考 | 完整、可读的 CANNBot checkout | 核对 `plugins-official/ops-direct-invoke/`、`plugins-community/ops-perf-evolution/` 及其引用的 `ops/`、`infra/`；只复制 SKILL.md 不够 |
+| 生成与优化参考 | 完整、可读的 CANNBot checkout | 新版直调核对原生启动器、harness、实际可用的 Agent CLI 和项目配置；轻量优化核对 `ascendc-ops-perf-evolution/plugin-sources.json` 及其 skills |
 | 直接 AscendC 工程 | Linux、Bash、所选模板要求的 CMake/构建工具与 C++ 工具链；配套 CANN Toolkit 的 AscendC 编译器、头文件和库 | 读取该版本生成入口、模板与环境检查；核对实际芯片、SoC 和编译目标 |
 | API 文档与开发模板 | 生成流程所用 asc-devkit 文档、示例及 CMake 资源 | 优先复用已有 SDK，按所选版本说明设置 `ASC_DEVKIT_DIR`；它不是 workflow 安装器自动下载的内容 |
 | 上板运行 | 可用 Ascend NPU、配套驱动/运行时、设备访问权限 | 在实际执行容器核对 `npu-smi info`、CANN 环境及获准设备；不在 Windows 宿主安装 NPU 软件 |
@@ -29,7 +29,7 @@
 
 例如，所选 CANNBot evaluator 若引用 `AscendPerformanceTest.py` 或 `ascendc-evaluation/scripts/evaluate.py`，须核对这些资源真实可读且可导入；缺失时按该版本说明补齐，不推测它们对应同名 PyPI 包。直接 AscendC 工程可以使用合同指定的正式 verifier，不为安装 workflow 补齐所有评测分支。具体入口见[执行适配的依赖边界](../skills/ascend-op-workflow/references/cannbot-execution.md#依赖边界)。
 
-以下内容**不是默认依赖**：Claude / Node / Claude Hook、TileLang 设计转译工具链、独立 `cannbot-codex` 包、HTML 报告依赖。Claude 协作、PMU、仿真或 HTML 仅在实际选择时准备。安装器和本仓适配脚本不依赖 PyYAML；外部脚本是否需要它按所选入口检查。
+安装器和本仓适配脚本使用 Python 标准库。进入新版直调后，按对应版本的 CANNBot quickstart 检查原生启动器、Python 依赖和所选 Agent CLI。Claude 协作、PMU、仿真或 HTML 按实际选择准备。
 
 ## 让 MindIE Agent 完成安装
 

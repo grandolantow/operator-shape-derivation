@@ -12,7 +12,7 @@ CANNBOT_SOURCE_ROOT=/path/to/cannbot-skills
 export PYTHONDONTWRITEBYTECODE=1
 ```
 
-安装器递归复制整个 workflow 技能并记录其内容哈希；不带 `--cannbot-root` 也会安装这四个脚本，shape/workload 仍可独立执行。带该参数时，外部技能快照仍是原始参考；优化执行以本入口和已选 profile 为准，不再另找同名 Codex adapter skill。
+安装器复制整个 workflow 技能并记录哈希，默认配套安装 CANNBot `master`，`--cannbot-root` 可指定已有 checkout。`--workflow-only` 仍安装以下脚本。运行时沿用合同或安装清单中的实际应用和 skills 版本。
 
 | 入口 | 用途 |
 | --- | --- |
@@ -23,11 +23,31 @@ export PYTHONDONTWRITEBYTECODE=1
 
 ## 执行路线
 
-- **生成**：继续直接读取外部 `plugins-official/ops-direct-invoke/AGENTS.md`、真实角色及 `workflows/task-prompts.md`。完成既有设计、走读、开发和审查，不进入 TileLang。Claude 的 Skill/Task/Read/Bash 语法由当前宿主真实工具承接；不假定自动 Hook 已执行。首个全量正确版本立即冻结 G，再实测。
 - **新优化任务**：按[轻量执行](cannbot-lightweight.md)，复用 G 有效证据，只准备本轮候选。
 - **显式 native 或已有原生 state/anchor**：按[完整执行兼容](cannbot-native.md)，沿用原状态、固定 G 与剩余预算；不重新初始化已运行的任务。
 
 不因角色名要求特定执行器；模型、effort、并发和设备使用服从当前项目与任务授权。native 角色保留算法、实现和评估职责，适配负责实际工具映射。没有实现/测量证据时，prepare、预约和 fixture 测试均不能记为算子成功。
+
+## 阶段 4 直接生成
+
+相对 `CANNBOT_SOURCE_ROOT` 定位 `plugins-official/ops-direct-invoke`。存在 `skills/ops-direct-invoke/SKILL.md` 的 checkout 走新版原生入口，按该 Skill、`workflow-orchestrator/SKILL.md` 和 quickstart 核对环境、项目级角色配置和实际可用的 provider。已有配置优先复用，缺少时按该版本说明在获准的工作区初始化。原生节点需要可运行的 Agent CLI 和对应的项目配置。
+
+先运行原生引导脚本，从 CSV 按 `use_when` 选择直接 Ascend C 模板。在独立的 `$GEN_RUN` 中保存引导、输入和日志。按模板契约准备 `$PROMPT_FILE`，附上已确认的需求与环境、冻结的 `OPERATOR_CONTRACT`、通过评审的 `DESIGN.md`、源码调研与热点卡片选型、正确性和性能用例的绝对路径，以及允许写入的工程路径。按模板声明复用现成输入，保留必经节点和审批。
+
+```bash
+GEN="$CANNBOT_SOURCE_ROOT/plugins-official/ops-direct-invoke/skills/ops-direct-invoke"
+HARNESS="$CANNBOT_SOURCE_ROOT/harness/workflow-orchestrator"
+python3 -B "$GEN/scripts/generate_workflow_guide.py" --output "$GEN_RUN/workflow-guide.csv"
+# 根据引导及任务契约设置 TEMPLATE、PROVIDER、ENV_SCRIPT 和 PROMPT_FILE。
+# START_DIR 为已初始化 CANNBot 角色配置的项目目录。
+python3 -B "$HARNESS/scripts/link_agent_config.py" --start-dir "$START_DIR" --work-dir "$GEN_RUN"
+python3 -B "$GEN/scripts/run_workflow.py" --template "$TEMPLATE" --work-dir "$GEN_RUN" \
+  --harness-skill "$HARNESS" --provider "$PROVIDER" --env-script "$ENV_SCRIPT" --prompt-file "$PROMPT_FILE"
+```
+
+按原生协议记录实际节点、候选实现、日志和退出状态。恢复同一轮按原生 `--yaml` 入口沿用运行目录。将实现和证据交回父 workflow；实质偏离已审设计时回报 `design_issue` 并复审。按父任务合同用全量正确性和固定性能集合验收 G。
+
+旧版 checkout 若有插件根 `AGENTS.md` 和 `workflows/task-prompts.md`，继续读取原角色及模板，通过当前宿主工具执行设计、走读、开发和审查。入口或运行依赖缺失时报告具体缺项，沿用当前 checkout 排查。
 
 ## 原生资源准备（按需）
 
@@ -36,10 +56,10 @@ export PYTHONDONTWRITEBYTECODE=1
 ```bash
 python3 -B "$ADAPTER/prepare_workspace.py" --workspace "$WORKDIR" --cannbot-root "$CANNBOT_SOURCE_ROOT"
 source "$WORKDIR/.cannbot/env.sh"
-WM="$CANNBOT_SKILLS_DIR/evolution-world-model/scripts"
+WM="$CANNBOT_WM_SCRIPTS"
 ```
 
-默认只复制 world-model、strategies、knowledge。需要额外技能时重复 `--skill NAME`，例如 `--skill tilelang2ascend-translator --skill ops-profiling --skill ops-evaluation`。模板从完整 checkout 定位，确有需要时只复制选中的模板到任务工程；不自动搬入整套 `workflows/templates/archive_tasks` 及其第三方源码。原始 checkout 不写入；资源来源及内容哈希保存在 `.cannbot/workspace.json`。只有 `status=prepared` 才能执行。中断复制可重试同一命令；已发布的可写资源保留，不被上游快照覆盖。上游资源变动或未知目录占位会报错，不静默切版本。原任务已有原生布局时继续使用原布局，无需强行转换。
+默认只复制 world-model、strategies、knowledge。新版资源按 `plugins-community/ascendc-ops-perf-evolution/plugin-sources.json` 解析，保留原生目录名和相邻关系；旧版沿用原目录。`CANNBOT_WM_SCRIPTS` 指向准备后实际的 world-model 脚本路径。需要额外技能时重复 `--skill NAME`，例如 `--skill tilelang2ascend-translator --skill ops-profiling --skill ops-evaluation`。模板从完整 checkout 定位，确有需要时只复制选中的模板到任务工程；不自动搬入整套 `workflows/templates/archive_tasks` 及其第三方源码。原始 checkout 不写入；资源来源及内容哈希保存在 `.cannbot/workspace.json`。只有 `status=prepared` 才能执行。中断复制可重试同一命令；已发布的可写资源保留，不被上游快照覆盖。上游资源变动或未知目录占位会报错，不静默切版本。原任务已有原生布局时继续使用原布局，无需强行转换。
 
 PowerShell 使用同样的 Python 参数，并点入生成的 `.cannbot/env.ps1`。资源使用普通目录副本，不要求符号链接权限。`--skill` 只准备所选资源，不自动解析或安装全部运行依赖；按原脚本实际 import/路径补齐需要的资源。
 

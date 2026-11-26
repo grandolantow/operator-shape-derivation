@@ -129,6 +129,28 @@ class PortabilityTests(unittest.TestCase):
             prepare.prepare(self.workspace, self.checkout)
         self.assertFalse((self.workspace / ".cannbot").exists())
 
+    def test_application_uses_declared_resources_and_keeps_native_names(self):
+        declaration = self.checkout / prepare.EVOLUTION_PLUGIN
+        declaration.parent.mkdir(parents=True)
+        paths = [f"community/ops/ascendc-{name}" for name in prepare.DEFAULT_SKILLS]
+        paths += ["community/ops/ascendc-ops-evaluation", "ops/ops-profiling"]
+        for relative in paths:
+            directory = self.checkout / "vendor/cannbot-skills" / relative
+            directory.mkdir(parents=True)
+            (directory / "SKILL.md").write_text(relative, encoding="utf-8")
+        declaration.write_text(json.dumps({
+            "skillsRepository": "vendor/cannbot-skills", "skills": paths,
+        }), encoding="utf-8")
+        result = prepare.prepare(self.workspace, self.checkout, ["ops-evaluation", "ops-profiling"])
+        installed = self.workspace / ".claude/skills"
+        self.assertEqual(set(result["resources"]), {
+            f".claude/skills/{Path(relative).name}" for relative in paths
+        })
+        wm = installed / "ascendc-evolution-world-model/scripts"
+        self.assertEqual(result["environment"]["CANNBOT_WM_SCRIPTS"], str(wm))
+        self.assertTrue((installed / "ascendc-ops-evaluation/SKILL.md").is_file())
+        self.assertFalse((installed / "evolution-world-model").exists())
+
     def test_translator_resource_does_not_require_archived_template_copies(self):
         source = self.checkout / "plugins-community/tilelang2ascendc-ops-generator/skills/tilelang2ascend-translator"
         source.mkdir(parents=True)
